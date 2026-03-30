@@ -2,7 +2,7 @@
   "name": "Lovely Pijamas",
   "short_name": "Lovely",
   "description": "Gestión de inventario para Lovely Pijamas",
-  "start_url": "/",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#1a1714",
   "theme_color": "#1a1714",
