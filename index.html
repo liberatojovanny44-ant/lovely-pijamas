@@ -400,6 +400,97 @@ header {
 }
 .filter-chip.active { background: var(--ink); color: var(--gold); border-color: var(--ink); }
 
+/* ── RECIBO ── */
+.recibo-overlay {
+  position: fixed; inset: 0;
+  background: rgba(26,23,20,0.7);
+  backdrop-filter: blur(6px);
+  z-index: 600;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.recibo-overlay.hidden { display: none; }
+.recibo-box {
+  background: white;
+  border-radius: 20px;
+  width: 100%; max-width: 360px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.recibo-header {
+  background: var(--ink);
+  padding: 24px 20px 20px;
+  text-align: center;
+}
+.recibo-brand {
+  font-family: Georgia, serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+.recibo-sub {
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: rgba(255,255,255,0.3);
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.recibo-num {
+  font-size: 10px;
+  color: rgba(255,255,255,0.2);
+  margin-top: 10px;
+  letter-spacing: 1px;
+}
+.recibo-body { padding: 20px; }
+.recibo-row {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--warm2);
+  font-size: 14px;
+}
+.recibo-row:last-of-type { border-bottom: none; }
+.recibo-row .r-label { color: var(--muted); font-size: 12px; }
+.recibo-row .r-val { font-weight: 600; color: var(--ink); text-align: right; }
+.recibo-total {
+  background: var(--warm);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin: 12px 0;
+}
+.recibo-total .t-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+.recibo-total .t-amount { font-family: Georgia, serif; font-size: 26px; font-weight: 600; color: var(--green); }
+.recibo-pago {
+  text-align: center; font-size: 11px; color: var(--muted);
+  letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px;
+}
+.recibo-fecha {
+  text-align: center; font-size: 10px; color: var(--muted);
+  margin-bottom: 16px;
+}
+.recibo-gracias {
+  text-align: center;
+  font-family: Georgia, serif;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--muted);
+  padding: 12px 0;
+  border-top: 1px dashed var(--warm2);
+  margin-bottom: 16px;
+}
+.recibo-actions { display: flex; gap: 10px; padding: 0 20px 20px; }
+.btn-recibo {
+  flex: 1; padding: 14px;
+  border-radius: 12px; border: none;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.btn-recibo.share { background: var(--ink); color: var(--gold); }
+.btn-recibo.close { background: var(--warm); color: var(--muted); border: 1.5px solid var(--warm2); }
+.btn-recibo:active { transform: scale(0.96); }
+
 /* Tabs historial */
 .tabs { display: flex; gap: 0; margin-bottom: 16px; background: var(--warm2); border-radius: 12px; padding: 3px; }
 .tab-btn {
@@ -440,6 +531,21 @@ header {
     <div class="modal-actions">
       <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
       <button class="btn-confirm" id="modal-confirm" onclick="confirmarModal()">Confirmar</button>
+    </div>
+  </div>
+</div>
+<!-- Modal recibo -->
+<div class="recibo-overlay hidden" id="recibo">
+  <div class="recibo-box">
+    <div class="recibo-header">
+      <div class="recibo-brand">LOVELY</div>
+      <div class="recibo-sub">Pijamas · Studio</div>
+      <div class="recibo-num" id="recibo-num"></div>
+    </div>
+    <div class="recibo-body" id="recibo-body"></div>
+    <div class="recibo-actions">
+      <button class="btn-recibo close" onclick="cerrarRecibo()">Cerrar</button>
+      <button class="btn-recibo share" onclick="compartirRecibo()"><i class="fas fa-share-nodes"></i> Compartir</button>
     </div>
   </div>
 </div>
@@ -681,6 +787,15 @@ function abrirModal(tipo, id) {
       <label>Color vendido (opcional)</label>
       <input class="input" id="modal-color" list="colores-list" placeholder="Seleccioná o escribí">
       <datalist id="colores-list">${(p.colores||[]).map(c=>`<option value="${c}">`).join('')}</datalist>
+    </div>
+    <div class="field">
+      <label>Método de pago</label>
+      <select class="input" id="modal-pago">
+        <option value="Efectivo">Efectivo</option>
+        <option value="Transferencia">Transferencia</option>
+        <option value="Tarjeta">Tarjeta</option>
+        <option value="Mercado Pago">Mercado Pago</option>
+      </select>
     </div>`;
   }
 
@@ -712,19 +827,21 @@ function confirmarModal() {
   const talla = tallas[0];
   const qty = parseInt(document.getElementById('modal-qty').value)||1;
   const color = document.getElementById('modal-color')?.value||'';
+  const metodoPago = document.getElementById('modal-pago')?.value||'Efectivo';
 
   if (tipo==='venta') {
     if (p[talla] < qty) { toast('⚠ Stock insuficiente'); return; }
     p[talla] -= qty;
-    historial.unshift({ tipo:'venta', prod: p.nombre, talla, qty, color, precio: p.precio * qty, fecha: new Date().toISOString() });
-    toast(`✓ Venta registrada · ${qty} ${talla.toUpperCase()}`);
+    const total = p.precio * qty;
+    historial.unshift({ tipo:'venta', prod: p.nombre, talla, qty, color, precio: total, fecha: new Date().toISOString(), pago: metodoPago });
+    save(); cerrarModal(); render();
+    mostrarRecibo({ prod: p.nombre, talla, qty, color, precio: p.precio, total, pago: metodoPago });
   } else {
     p[talla] += qty;
     historial.unshift({ tipo:'entrada', prod: p.nombre, talla, qty, fecha: new Date().toISOString() });
     toast(`✓ Stock repuesto · +${qty} ${talla.toUpperCase()}`);
+    save(); cerrarModal(); render();
   }
-
-  save(); cerrarModal(); render();
 }
 
 function cerrarModal() {
@@ -888,6 +1005,60 @@ function toast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'), 2400);
+}
+
+let reciboData = {};
+
+function mostrarRecibo(data) {
+  reciboData = data;
+  const fecha = new Date();
+  const fechaStr = fecha.toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
+  const horaStr = fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  const num = 'REC-' + Date.now().toString().slice(-6);
+
+  document.getElementById('recibo-num').textContent = num;
+  document.getElementById('recibo-body').innerHTML = `
+    <div class="recibo-row">
+      <span class="r-label">Producto</span>
+      <span class="r-val">${data.prod}</span>
+    </div>
+    <div class="recibo-row">
+      <span class="r-label">Talla</span>
+      <span class="r-val">${data.talla.toUpperCase()}</span>
+    </div>
+    ${data.color ? `<div class="recibo-row"><span class="r-label">Color</span><span class="r-val">${data.color}</span></div>` : ''}
+    <div class="recibo-row">
+      <span class="r-label">Cantidad</span>
+      <span class="r-val">${data.qty} unidad${data.qty>1?'es':''}</span>
+    </div>
+    <div class="recibo-row">
+      <span class="r-label">Precio unitario</span>
+      <span class="r-val">$${data.precio.toLocaleString()}</span>
+    </div>
+    <div class="recibo-total">
+      <span class="t-label">Total</span>
+      <span class="t-amount">$${data.total.toLocaleString()}</span>
+    </div>
+    <div class="recibo-pago">Método de pago: ${data.pago}</div>
+    <div class="recibo-fecha">${fechaStr} · ${horaStr}</div>
+    <div class="recibo-gracias">¡Gracias por tu compra!</div>
+  `;
+  document.getElementById('recibo').classList.remove('hidden');
+}
+
+function cerrarRecibo() {
+  document.getElementById('recibo').classList.add('hidden');
+}
+
+function compartirRecibo() {
+  const d = reciboData;
+  const fecha = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
+  const texto = `🌟 LOVELY PIJAMAS\n━━━━━━━━━━━━━━\n📦 ${d.prod}\n📐 Talla: ${d.talla.toUpperCase()}${d.color ? '\n🎨 Color: '+d.color : ''}\n🔢 Cantidad: ${d.qty}\n💰 Total: $${d.total.toLocaleString()}\n💳 Pago: ${d.pago}\n📅 ${fecha}\n━━━━━━━━━━━━━━\n¡Gracias por tu compra! 🛍️`;
+  if (navigator.share) {
+    navigator.share({ text: texto });
+  } else {
+    navigator.clipboard.writeText(texto).then(() => toast('✓ Recibo copiado'));
+  }
 }
 
 // ── INIT ─────────────────────────────────────────────
