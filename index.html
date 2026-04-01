@@ -524,4 +524,559 @@ header {
 
 <!-- Modal recibo -->
 <div class="recibo-overlay hidden" id="recibo">
-  <div class
+  <div class="recibo-box">
+    <div class="recibo-header">
+      <div class="recibo-brand">LOVELY</div>
+      <div class="recibo-sub">Pijamas · Studio</div>
+      <div class="recibo-num" id="recibo-num"></div>
+    </div>
+    <div class="recibo-body" id="recibo-body"></div>
+    <div class="recibo-actions">
+      <button class="btn-recibo close" onclick="cerrarRecibo()">Cerrar</button>
+      <button class="btn-recibo share" onclick="compartirRecibo()"><i class="fas fa-share-nodes"></i> Compartir</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ══ FIREBASE ══ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, addDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCYef33k6G7eZqTAT6RXLK9b2YT0JnfmGM",
+  authDomain: "lovelypijamas-97662.firebaseapp.com",
+  projectId: "lovelypijamas-97662",
+  storageBucket: "lovelypijamas-97662.firebasestorage.app",
+  messagingSenderId: "364123012682",
+  appId: "1:364123012682:web:53c0f59825e26c364830b3"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+
+// ── Variables globales ──
+window.inventario = [];
+window.historial = [];
+window.vista = 'stock';
+window.modalData = {};
+window.tallasSeleccionadas = {};
+window.busquedaActual = '';
+window.filtroTalla = 'todas';
+window.coloresForm = [];
+window.editId = null;
+window.histTab = 'todo';
+window.reciboData = {};
+
+// ── Escuchar inventario en tiempo real ──
+onSnapshot(query(collection(db, 'inventario')), snap => {
+  window.inventario = snap.docs.map(d => ({ firestoreId: d.id, ...d.data() }));
+  document.getElementById('loading-screen').style.display = 'none';
+  render();
+});
+
+// ── Escuchar historial en tiempo real ──
+onSnapshot(query(collection(db, 'historial'), orderBy('fecha', 'desc')), snap => {
+  window.historial = snap.docs.map(d => ({ firestoreId: d.id, ...d.data() }));
+  render();
+});
+
+// Ocultar pantalla de carga después de 3 segundos como máximo
+setTimeout(() => {
+  document.getElementById('loading-screen').style.display = 'none';
+  render();
+}, 3000);
+
+// ── Guardar inventario ──
+window.saveInventario = async function(item) {
+  const { firestoreId, ...data } = item;
+  if (firestoreId) {
+    await setDoc(doc(db, 'inventario', firestoreId), data);
+  } else {
+    const ref = await addDoc(collection(db, 'inventario'), data);
+    item.firestoreId = ref.id;
+  }
+};
+
+// ── Guardar historial ──
+window.saveHistorial = async function(item) {
+  await addDoc(collection(db, 'historial'), item);
+};
+
+// ── Eliminar de inventario ──
+window.deleteInventario = async function(firestoreId) {
+  await deleteDoc(doc(db, 'inventario', firestoreId));
+};
+
+// ── NAVEGACIÓN ──
+window.irA = function(v) {
+  window.vista = v;
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.getElementById('btn-' + v)?.classList.add('active');
+  if (v !== 'nuevo') window.coloresForm = [];
+  render();
+};
+
+// ── RENDER ──
+window.render = function() {
+  const app = document.getElementById('app');
+  if (!app) return;
+  if (window.vista === 'stock') renderStock(app);
+  else if (window.vista === 'nuevo') renderNuevo(app, window.editId);
+  else if (window.vista === 'historial') renderHistorial(app);
+  else if (window.vista === 'balance') renderBalance(app);
+};
+
+// ── STOCK ──
+function renderStock(app) {
+  const inv = window.inventario;
+  let lista = inv.filter(p => {
+    const matchBusq = p.nombre.toLowerCase().includes(window.busquedaActual.toLowerCase());
+    const matchTalla = window.filtroTalla === 'todas' || p[window.filtroTalla] > 0;
+    return matchBusq && matchTalla;
+  });
+
+  const tallas = ['todas', 's', 'm', 'l', 'xl'];
+  let html = `
+    <div class="search-wrap">
+      <i class="fas fa-magnifying-glass"></i>
+      <input class="input" placeholder="Buscar modelo..." value="${window.busquedaActual}"
+        oninput="window.busquedaActual=this.value;render()">
+    </div>
+    <div class="filter-row">
+      ${tallas.map(t => `<button class="filter-chip ${window.filtroTalla===t?'active':''}" onclick="window.filtroTalla='${t}';render()">${t==='todas'?'Todas':t.toUpperCase()}</button>`).join('')}
+    </div>`;
+
+  if (lista.length === 0) {
+    html += `<div class="empty-state"><i class="fas fa-layer-group"></i><p>${inv.length===0?'Sin productos aún':'Sin resultados'}</p></div>`;
+  }
+
+  lista.forEach(p => {
+    const totalStock = p.s + p.m + p.l + p.xl;
+    html += `<div class="prod-card">
+      <div class="prod-header">
+        <div>
+          <div class="prod-name">${p.nombre}</div>
+          <div class="prod-price">$${p.precio.toLocaleString()}</div>
+          <div class="prod-cost">Costo: $${p.costo.toLocaleString()}</div>
+        </div>
+        <div class="prod-actions">
+          <button class="btn-sm" onclick="abrirEditar('${p.firestoreId}')"><i class="fas fa-pen"></i></button>
+          <button class="btn-sm danger" onclick="eliminar('${p.firestoreId}')"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+      ${(p.colores||[]).length ? `<div class="colores-wrap">${p.colores.map(c=>`<span class="color-tag">${c}</span>`).join('')}</div>` : ''}
+      <div class="tallas-grid">
+        ${['s','m','l','xl'].map(t=>`
+          <div class="talla-btn ${p[t]===0?'zero':''}" onclick="abrirModal('venta','${p.firestoreId}')">
+            <span class="t-label">${t.toUpperCase()}</span>
+            <span class="t-qty">${p[t]}</span>
+          </div>`).join('')}
+      </div>
+      <p class="talla-hint">Total: ${totalStock} unidades</p>
+      <div class="quick-actions" style="margin-top:10px">
+        <button class="btn-action sell" onclick="abrirModal('venta','${p.firestoreId}')"><i class="fas fa-tag"></i> Vender</button>
+        <button class="btn-action restock" onclick="abrirModal('entrada','${p.firestoreId}')"><i class="fas fa-box"></i> Reponer</button>
+      </div>
+    </div>`;
+  });
+
+  app.innerHTML = html;
+}
+
+// ── NUEVO / EDITAR ──
+function renderNuevo(app, firestoreId) {
+  window.editId = firestoreId || null;
+  const p = firestoreId ? window.inventario.find(x => x.firestoreId === firestoreId) : null;
+  if (p && (!window.coloresForm || window.coloresForm.length === 0)) {
+    window.coloresForm = [...(p.colores || [])];
+  }
+
+  app.innerHTML = `
+    <div class="card">
+      <div class="section-title">${p ? 'Editar Modelo' : 'Nuevo Modelo'}</div>
+      <div class="field">
+        <label>Nombre del Modelo</label>
+        <input class="input" id="n-nombre" placeholder="Ej: Pijama Seda Azul" value="${p?p.nombre:''}">
+      </div>
+      <div class="input-row">
+        <div class="field">
+          <label>Precio Costo</label>
+          <input class="input" id="n-costo" type="number" placeholder="0" value="${p?p.costo:''}">
+        </div>
+        <div class="field">
+          <label>Precio Venta</label>
+          <input class="input" id="n-precio" type="number" placeholder="0" value="${p?p.precio:''}">
+        </div>
+      </div>
+      <div class="field">
+        <label>Colores disponibles</label>
+        <div class="colores-input-wrap" onclick="document.getElementById('color-input-field').focus()" id="colores-chips">
+          <input id="color-input-field" placeholder="Escribí y presioná Enter..." onkeydown="agregarColor(event)">
+        </div>
+      </div>
+      <div class="field">
+        <label>Stock por Talla</label>
+        <div class="input-3">
+          ${['s','m','l','xl'].map(t=>`<div class="talla-field"><span>${t.toUpperCase()}</span><input class="input" id="n-${t}" type="number" value="${p?p[t]:0}"></div>`).join('')}
+        </div>
+      </div>
+      <button class="btn-gold" onclick="${p?`guardarEdicion('${firestoreId}')`:'guardar()'}">${p?'Guardar Cambios':'Agregar al Stock'}</button>
+      ${p?`<button style="width:100%;margin-top:10px;padding:14px;border-radius:12px;border:1.5px solid var(--warm2);background:var(--warm);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer" onclick="irA('stock')">Cancelar</button>`:''}
+    </div>`;
+
+  renderColoresChips();
+}
+
+window.agregarColor = function(e) {
+  if (e.key === 'Enter') {
+    const val = e.target.value.trim();
+    if (val && !window.coloresForm.includes(val)) {
+      window.coloresForm.push(val);
+      renderColoresChips();
+    }
+    e.target.value = '';
+    e.preventDefault();
+  }
+};
+
+function renderColoresChips() {
+  const wrap = document.getElementById('colores-chips');
+  if (!wrap) return;
+  wrap.innerHTML = window.coloresForm.map((c,i) => `
+    <span class="color-chip">${c}<button onclick="quitarColor(${i})">×</button></span>`).join('');
+  const inp = document.createElement('input');
+  inp.id = 'color-input-field';
+  inp.placeholder = window.coloresForm.length ? '+color' : 'Escribí y presioná Enter...';
+  inp.style.cssText = 'border:none;outline:none;background:transparent;font-size:14px;min-width:80px;flex:1;color:var(--ink)';
+  inp.onkeydown = window.agregarColor;
+  wrap.appendChild(inp);
+}
+
+window.quitarColor = function(i) {
+  window.coloresForm.splice(i,1);
+  renderColoresChips();
+};
+
+window.guardar = async function() {
+  const nombre = document.getElementById('n-nombre').value.trim();
+  if (!nombre) { toast('⚠ Ponle un nombre al modelo'); return; }
+  const nuevo = {
+    id: Date.now(),
+    nombre,
+    costo: parseFloat(document.getElementById('n-costo').value)||0,
+    precio: parseFloat(document.getElementById('n-precio').value)||0,
+    colores: [...window.coloresForm],
+    s: parseInt(document.getElementById('n-s').value)||0,
+    m: parseInt(document.getElementById('n-m').value)||0,
+    l: parseInt(document.getElementById('n-l').value)||0,
+    xl: parseInt(document.getElementById('n-xl').value)||0,
+  };
+  await window.saveInventario(nuevo);
+  window.coloresForm = [];
+  toast('✓ Modelo agregado');
+  irA('stock');
+};
+
+window.abrirEditar = function(firestoreId) {
+  window.vista = 'nuevo';
+  window.coloresForm = [];
+  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+  document.getElementById('btn-nuevo').classList.add('active');
+  renderNuevo(document.getElementById('app'), firestoreId);
+};
+
+window.guardarEdicion = async function(firestoreId) {
+  const p = window.inventario.find(x => x.firestoreId === firestoreId);
+  if (!p) return;
+  p.nombre = document.getElementById('n-nombre').value.trim() || p.nombre;
+  p.costo = parseFloat(document.getElementById('n-costo').value)||0;
+  p.precio = parseFloat(document.getElementById('n-precio').value)||0;
+  p.colores = [...window.coloresForm];
+  p.s = parseInt(document.getElementById('n-s').value)||0;
+  p.m = parseInt(document.getElementById('n-m').value)||0;
+  p.l = parseInt(document.getElementById('n-l').value)||0;
+  p.xl = parseInt(document.getElementById('n-xl').value)||0;
+  await window.saveInventario(p);
+  window.coloresForm = [];
+  toast('✓ Cambios guardados');
+  irA('stock');
+};
+
+window.eliminar = async function(firestoreId) {
+  if (confirm('¿Eliminar este modelo?')) {
+    await window.deleteInventario(firestoreId);
+    render();
+  }
+};
+
+// ── MODAL VENTA / ENTRADA ──
+window.abrirModal = function(tipo, firestoreId) {
+  const p = window.inventario.find(x => x.firestoreId === firestoreId);
+  if (!p) return;
+  window.tallasSeleccionadas = {};
+  window.modalData = { tipo, firestoreId };
+
+  document.getElementById('modal-title').textContent = tipo==='venta' ? `Registrar Venta · ${p.nombre}` : `Reponer Stock · ${p.nombre}`;
+  document.getElementById('modal-confirm').textContent = tipo==='venta' ? 'Registrar Venta' : 'Agregar Stock';
+
+  let html = `<p style="font-size:12px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;text-transform:uppercase">Seleccioná las tallas y cantidades</p>
+  <div class="tallas-modal">`;
+
+  ['s','m','l','xl'].forEach(t => {
+    html += `<div class="talla-modal-btn" id="tm-${t}" onclick="toggleTalla('${t}')">
+      <span class="t-l">${t.toUpperCase()}</span>
+      <span class="t-q">${tipo==='venta'?p[t]:'∞'}</span>
+    </div>`;
+  });
+
+  html += `</div>
+  <div class="field" style="margin-top:12px">
+    <label>Cantidad</label>
+    <input class="input" id="modal-qty" type="number" value="1" min="1">
+  </div>`;
+
+  if (tipo==='venta') {
+    html += `<div class="field">
+      <label>Color vendido (opcional)</label>
+      <input class="input" id="modal-color" list="colores-list" placeholder="Seleccioná o escribí">
+      <datalist id="colores-list">${(p.colores||[]).map(c=>`<option value="${c}">`).join('')}</datalist>
+    </div>
+    <div class="field">
+      <label>Método de pago</label>
+      <select class="input" id="modal-pago">
+        <option value="Efectivo">Efectivo</option>
+        <option value="Transferencia">Transferencia</option>
+        <option value="Tarjeta">Tarjeta</option>
+        <option value="Mercado Pago">Mercado Pago</option>
+      </select>
+    </div>`;
+  }
+
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal').classList.remove('hidden');
+};
+
+window.toggleTalla = function(t) {
+  const btn = document.getElementById('tm-'+t);
+  if (window.tallasSeleccionadas[t]) {
+    delete window.tallasSeleccionadas[t];
+    btn.classList.remove('selected');
+  } else {
+    Object.keys(window.tallasSeleccionadas).forEach(k => {
+      document.getElementById('tm-'+k)?.classList.remove('selected');
+    });
+    window.tallasSeleccionadas = { [t]: true };
+    btn.classList.add('selected');
+  }
+};
+
+window.confirmarModal = async function() {
+  const { tipo, firestoreId } = window.modalData;
+  const p = window.inventario.find(x => x.firestoreId === firestoreId);
+  if (!p) return;
+  const tallas = Object.keys(window.tallasSeleccionadas);
+  if (!tallas.length) { toast('⚠ Seleccioná una talla'); return; }
+  const talla = tallas[0];
+  const qty = parseInt(document.getElementById('modal-qty').value)||1;
+  const color = document.getElementById('modal-color')?.value||'';
+  const metodoPago = document.getElementById('modal-pago')?.value||'Efectivo';
+
+  if (tipo==='venta') {
+    if (p[talla] < qty) { toast('⚠ Stock insuficiente'); return; }
+    p[talla] -= qty;
+    const total = p.precio * qty;
+    await window.saveInventario(p);
+    await window.saveHistorial({ tipo:'venta', prod: p.nombre, talla, qty, color, precio: total, fecha: new Date().toISOString(), pago: metodoPago });
+    cerrarModal(); render();
+    mostrarRecibo({ prod: p.nombre, talla, qty, color, precio: p.precio, total, pago: metodoPago });
+  } else {
+    p[talla] += qty;
+    await window.saveInventario(p);
+    await window.saveHistorial({ tipo:'entrada', prod: p.nombre, talla, qty, fecha: new Date().toISOString() });
+    toast(`✓ Stock repuesto · +${qty} ${talla.toUpperCase()}`);
+    cerrarModal(); render();
+  }
+};
+
+window.cerrarModal = function() {
+  document.getElementById('modal').classList.add('hidden');
+  window.tallasSeleccionadas = {};
+};
+
+// ── HISTORIAL ──
+function renderHistorial(app) {
+  let hist = window.historial;
+  if (window.histTab === 'ventas') hist = hist.filter(h=>h.tipo==='venta');
+  if (window.histTab === 'entradas') hist = hist.filter(h=>h.tipo==='entrada');
+
+  let html = `
+    <div class="tabs">
+      <button class="tab-btn ${window.histTab==='todo'?'active':''}" onclick="window.histTab='todo';render()">Todo</button>
+      <button class="tab-btn ${window.histTab==='ventas'?'active':''}" onclick="window.histTab='ventas';render()">Ventas</button>
+      <button class="tab-btn ${window.histTab==='entradas'?'active':''}" onclick="window.histTab='entradas';render()">Entradas</button>
+    </div>
+    <div class="card">`;
+
+  if (hist.length === 0) {
+    html += `<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p>Sin movimientos aún</p></div>`;
+  }
+
+  hist.slice(0,60).forEach(h => {
+    const fecha = new Date(h.fecha);
+    const fechaStr = fecha.toLocaleDateString('es-AR',{day:'2-digit',month:'short'}) + ' · ' + fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+    html += `<div class="hist-item">
+      <div class="hist-left">
+        <span class="hist-name">${h.prod}</span>
+        <span class="hist-meta">${h.talla.toUpperCase()} · ${h.qty} u${h.color?` · ${h.color}`:''} · ${fechaStr}</span>
+      </div>
+      <div style="text-align:right">
+        <span class="hist-badge ${h.tipo==='venta'?'venta':'entrada'}">${h.tipo==='venta'?'Venta':'Entrada'}</span>
+        ${h.tipo==='venta'?`<div style="font-size:13px;font-weight:600;color:var(--green);margin-top:4px">+$${h.precio.toLocaleString()}</div>`:''}
+      </div>
+    </div>`;
+  });
+
+  app.innerHTML = html + `</div>`;
+}
+
+// ── BALANCE ──
+function renderBalance(app) {
+  const inv = window.inventario;
+  const hist = window.historial;
+  let tStock=0, tCosto=0, tVenta=0;
+  inv.forEach(p => {
+    const cant = p.s+p.m+p.l+p.xl;
+    tStock += cant;
+    tCosto += cant*p.costo;
+    tVenta += cant*p.precio;
+  });
+
+  const totalVentas = hist.filter(h=>h.tipo==='venta').reduce((a,h)=>a+h.precio,0);
+  const totalUnidadesVendidas = hist.filter(h=>h.tipo==='venta').reduce((a,h)=>a+h.qty,0);
+  const gananciaProyectada = tVenta - tCosto;
+
+  const ventasPorModelo = {};
+  hist.filter(h=>h.tipo==='venta').forEach(h => {
+    ventasPorModelo[h.prod] = (ventasPorModelo[h.prod]||0) + h.qty;
+  });
+  const topModelos = Object.entries(ventasPorModelo).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxVenta = topModelos[0]?.[1] || 1;
+
+  let html = `
+    <div class="balance-hero">
+      <p class="balance-label">Ganancia Proyectada</p>
+      <div class="balance-amount">$${gananciaProyectada.toLocaleString()}</div>
+      <div class="balance-grid">
+        <div class="balance-item"><p>Costo Total</p><p style="color:#e74c3c">$${tCosto.toLocaleString()}</p></div>
+        <div class="balance-item"><p>Valor Stock</p><p style="color:#2ecc71">$${tVenta.toLocaleString()}</p></div>
+      </div>
+    </div>
+    <div class="bal-mini">
+      <div class="bal-mini-card"><div class="bm-label">Unidades Stock</div><div class="bm-val">${tStock}</div></div>
+      <div class="bal-mini-card"><div class="bm-label">Unidades Vendidas</div><div class="bm-val">${totalUnidadesVendidas}</div></div>
+      <div class="bal-mini-card" style="grid-column:1/-1"><div class="bm-label">Total Recaudado</div><div class="bm-val" style="color:var(--green)">$${totalVentas.toLocaleString()}</div></div>
+    </div>`;
+
+  if (topModelos.length > 0) {
+    html += `<div class="card"><div class="section-title" style="margin-bottom:16px">Top Modelos Vendidos</div><div class="chart-wrap">`;
+    topModelos.forEach(([nombre, qty]) => {
+      const pct = Math.round((qty/maxVenta)*100);
+      html += `<div class="bar-row"><span class="bar-label">${nombre}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><span class="bar-val">${qty}u</span></div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  const porTalla = {s:0,m:0,l:0,xl:0};
+  hist.filter(h=>h.tipo==='venta').forEach(h => { if(porTalla[h.talla]!==undefined) porTalla[h.talla]+=h.qty; });
+  const maxT = Math.max(...Object.values(porTalla),1);
+  html += `<div class="card" style="margin-top:10px"><div class="section-title" style="margin-bottom:16px">Ventas por Talla</div><div class="chart-wrap">`;
+  Object.entries(porTalla).forEach(([t,qty]) => {
+    html += `<div class="bar-row"><span class="bar-label">${t.toUpperCase()}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round((qty/maxT)*100)}%"></div></div><span class="bar-val">${qty}u</span></div>`;
+  });
+  html += `</div></div>`;
+  app.innerHTML = html;
+}
+
+// ── EXCEL ──
+window.descargarExcel = function() {
+  if (!window.inventario.length) { toast('⚠ Sin datos para exportar'); return; }
+  const wb = XLSX.utils.book_new();
+  const inv = window.inventario.map(p=>({
+    Modelo: p.nombre, Colores: (p.colores||[]).join(', '),
+    Costo: p.costo, Venta: p.precio,
+    S: p.s, M: p.m, L: p.l, XL: p.xl,
+    Total: p.s+p.m+p.l+p.xl,
+    'Valor Stock': (p.s+p.m+p.l+p.xl)*p.precio
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(inv), 'Inventario');
+  if (window.historial.length) {
+    const hist = window.historial.map(h=>({
+      Tipo: h.tipo, Modelo: h.prod, Talla: h.talla.toUpperCase(),
+      Cantidad: h.qty, Color: h.color||'', Total: h.precio||0,
+      Fecha: new Date(h.fecha).toLocaleString('es-AR')
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hist), 'Historial');
+  }
+  XLSX.writeFile(wb, `Lovely_${new Date().toLocaleDateString('es-AR').replace(/\//g,'-')}.xlsx`);
+  toast('✓ Excel exportado');
+};
+
+// ── TOAST ──
+window.toast = function(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+};
+
+// ── RECIBO ──
+function mostrarRecibo(data) {
+  window.reciboData = data;
+  const fecha = new Date();
+  const fechaStr = fecha.toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
+  const horaStr = fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+  const num = 'REC-' + Date.now().toString().slice(-6);
+  document.getElementById('recibo-num').textContent = num;
+  document.getElementById('recibo-body').innerHTML = `
+    <div class="recibo-row"><span class="r-label">Producto</span><span class="r-val">${data.prod}</span></div>
+    <div class="recibo-row"><span class="r-label">Talla</span><span class="r-val">${data.talla.toUpperCase()}</span></div>
+    ${data.color ? `<div class="recibo-row"><span class="r-label">Color</span><span class="r-val">${data.color}</span></div>` : ''}
+    <div class="recibo-row"><span class="r-label">Cantidad</span><span class="r-val">${data.qty} unidad${data.qty>1?'es':''}</span></div>
+    <div class="recibo-row"><span class="r-label">Precio unitario</span><span class="r-val">$${data.precio.toLocaleString()}</span></div>
+    <div class="recibo-total"><span class="t-label">Total</span><span class="t-amount">$${data.total.toLocaleString()}</span></div>
+    <div class="recibo-pago">Método de pago: ${data.pago}</div>
+    <div class="recibo-fecha">${fechaStr} · ${horaStr}</div>
+    <div class="recibo-gracias">¡Gracias por tu compra!</div>`;
+  document.getElementById('recibo').classList.remove('hidden');
+}
+
+window.cerrarRecibo = function() {
+  document.getElementById('recibo').classList.add('hidden');
+};
+
+window.compartirRecibo = function() {
+  const d = window.reciboData;
+  const fecha = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
+  const texto = `🌟 LOVELY PIJAMAS\n━━━━━━━━━━━━━━\n📦 ${d.prod}\n📐 Talla: ${d.talla.toUpperCase()}${d.color ? '\n🎨 Color: '+d.color : ''}\n🔢 Cantidad: ${d.qty}\n💰 Total: $${d.total.toLocaleString()}\n💳 Pago: ${d.pago}\n📅 ${fecha}\n━━━━━━━━━━━━━━\n¡Gracias por tu compra! 🛍️`;
+  if (navigator.share) {
+    navigator.share({ text: texto });
+  } else {
+    navigator.clipboard.writeText(texto).then(() => toast('✓ Recibo copiado'));
+  }
+};
+
+// ── INIT ──
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) cerrarModal();
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+</script>
+</body>
+</html>
