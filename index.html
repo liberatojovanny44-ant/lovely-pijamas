@@ -13,7 +13,7 @@
 <style>
 :root {
   --gold: #c9a84c; --gold-dark: #8a6520; --ink: #1a1714; --warm: #f7f4ef; --warm2: #efe9de;
-  --muted: #9b8f80; --white: #ffffff; --green: #27ae60; --red: #e74c3c;
+  --muted: #9b8f80; --white: #ffffff; --green: #27ae60; --red: #e74c3c; --blue: #3498db;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body { font-family: -apple-system, sans-serif; background: var(--warm); color: var(--ink); padding-bottom: 100px; }
@@ -34,17 +34,15 @@ header { background: var(--ink); padding: 20px; display: flex; justify-content: 
 .tallas-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
 .talla-btn { background: var(--warm); border: 1.5px solid var(--warm2); border-radius: 12px; padding: 10px 5px; display: flex; flex-direction: column; align-items: center; }
 
-#modal-factura { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
-.recibo { background: #fff; width: 100%; max-width: 350px; border-radius: 10px; padding: 25px; font-family: 'Courier New', Courier, monospace; position: relative; }
-.recibo-header { text-align: center; border-bottom: 1px dashed #ccc; padding-bottom: 15px; margin-bottom: 15px; }
-.venta-item { padding: 8px 0; border-bottom: 1px solid var(--warm2); display: flex; justify-content: space-between; font-size: 12px; }
+#modal-factura, #modal-editar { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+.recibo, .edit-box { background: #fff; width: 100%; max-width: 350px; border-radius: 10px; padding: 25px; position: relative; }
+.venta-item { padding: 8px 0; border-bottom: 1px solid var(--warm2); display: flex; justify-content: space-between; font-size: 13px; }
 </style>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-  // DATOS DE FIREBASE YA INTEGRADOS
   const firebaseConfig = {
     databaseURL: "https://lovelypijamas-97662-default-rtdb.firebaseio.com/", 
     projectId: "lovelypijamas-97662"
@@ -63,6 +61,7 @@ header { background: var(--ink); padding: 20px; display: flex; justify-content: 
 
   onValue(ventasRef, (snapshot) => {
     window.historialVentas = snapshot.val() || [];
+    if(vistaActual === 'balance') window.renderActual();
   });
 
   window.guardarStock = (data) => set(stockRef, data);
@@ -79,6 +78,7 @@ header { background: var(--ink); padding: 20px; display: flex; justify-content: 
 <main id="app"></main>
 
 <div id="modal-factura"><div class="recibo" id="recibo-content"></div></div>
+<div id="modal-editar"><div class="edit-box" id="edit-content"></div></div>
 
 <nav class="nav-bottom">
   <button class="nav-link active" id="btn-stock" onclick="irA('stock')"><i class="fas fa-box"></i>Stock</button>
@@ -121,19 +121,58 @@ function renderStock(container) {
           <span style="font-size:18px; font-weight:700">${p.tallas[t] || 0}</span>
         </button>`).join('')}
       </div>
-      <button onclick="eliminarProd(${i})" style="margin-top:12px; background:none; border:none; color:var(--red); font-size:10px">ELIMINAR PRODUCTO</button>
+      <div style="margin-top:15px; display:flex; gap:10px">
+        <button onclick="abrirEditor(${i})" style="flex:1; padding:8px; border-radius:8px; border:1px solid var(--gold); background:none; color:var(--gold-dark); font-size:10px; font-weight:bold">EDITAR</button>
+        <button onclick="elimProd(${i})" style="padding:8px; border:none; background:none; color:var(--red); font-size:10px">ELIMINAR</button>
+      </div>
     </div>`;
   });
-  container.innerHTML = html || '<p style="text-align:center; padding:50px">Cargando inventario...</p>';
+  container.innerHTML = html || '<p style="text-align:center; padding:50px">No hay productos.</p>';
+}
+
+window.abrirEditor = function(idx) {
+  const p = window.productos[idx];
+  document.getElementById('modal-editar').style.display = 'flex';
+  document.getElementById('edit-content').innerHTML = `
+    <h3 style="margin-bottom:15px">Editar Producto</h3>
+    <input type="text" id="e-nom" class="input" value="${p.nombre}">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+      <label style="font-size:10px">Costo</label><label style="font-size:10px">Venta</label>
+      <input type="number" id="e-costo" class="input" value="${p.costo}">
+      <input type="number" id="e-venta" class="input" value="${p.precioVenta}">
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+      <input type="number" id="e-s" class="input" value="${p.tallas.S}" placeholder="S">
+      <input type="number" id="e-m" class="input" value="${p.tallas.M}" placeholder="M">
+      <input type="number" id="e-l" class="input" value="${p.tallas.L}" placeholder="L">
+      <input type="number" id="e-xl" class="input" value="${p.tallas.XL}" placeholder="XL">
+    </div>
+    <button class="btn-gold" onclick="actualizar(${idx})">Actualizar Todo</button>
+    <button onclick="document.getElementById('modal-editar').style.display='none'" style="width:100%; margin-top:10px; background:none; border:none; color:var(--muted)">Cerrar</button>
+  `;
+}
+
+window.actualizar = function(idx) {
+  window.productos[idx] = {
+    nombre: document.getElementById('e-nom').value,
+    costo: parseFloat(document.getElementById('e-costo').value),
+    precioVenta: parseFloat(document.getElementById('e-venta').value),
+    tallas: {
+      S: parseInt(document.getElementById('e-s').value || 0),
+      M: parseInt(document.getElementById('e-m').value || 0),
+      L: parseInt(document.getElementById('e-l').value || 0),
+      XL: parseInt(document.getElementById('e-xl').value || 0)
+    }
+  };
+  window.guardarStock(window.productos);
+  document.getElementById('modal-editar').style.display = 'none';
 }
 
 function prepararVenta(idx, talla) {
   if(window.productos[idx].tallas[talla] > 0) {
     const p = window.productos[idx];
     const fecha = new Date().toLocaleString();
-    const idVenta = "FAC-" + Math.floor(Math.random()*9000+1000);
-    const venta = { nombre: p.nombre, talla: talla, precio: p.precioVenta, costo: p.costo, fecha: fecha, id: idVenta };
-    
+    const venta = { nombre: p.nombre, talla: talla, precio: p.precioVenta, costo: p.costo, fecha: fecha };
     window.historialVentas.push(venta);
     window.productos[idx].tallas[talla]--;
     window.guardarStock(window.productos);
@@ -145,27 +184,22 @@ function prepararVenta(idx, talla) {
 function mostrarFactura(v) {
   document.getElementById('modal-factura').style.display = 'flex';
   document.getElementById('recibo-content').innerHTML = `
-    <div class="recibo-header">
-      <h2 style="font-family:Georgia; letter-spacing:2px">LOVELY</h2>
-      <p style="font-size:10px">Pijamas · Studio</p>
-      <p style="font-size:9px">${v.fecha}</p>
+    <div style="text-align:center; border-bottom:1px dashed #ccc; padding-bottom:10px">
+      <h2 style="font-family:Georgia">LOVELY</h2><p style="font-size:10px">Pijamas Studio</p>
     </div>
     <div style="margin:15px 0">1x ${v.nombre} [${v.talla}] - $${v.precio}</div>
-    <div style="display:flex; justify-content:space-between; font-weight:700; font-size:18px"><span>TOTAL</span><span>$${v.precio}</span></div>
-    <div style="text-align:center; margin-top:20px">
-      <button onclick="enviarWA('${v.nombre}', '${v.talla}', '${v.precio}')" style="width:100%; padding:12px; background:#25d366; color:#fff; border:none; border-radius:8px; font-weight:700; margin-bottom:10px">WHATSAPP</button>
-      <button onclick="document.getElementById('modal-factura').style.display='none'" style="border:none; background:none; color:var(--muted)">Cerrar</button>
-    </div>`;
+    <button onclick="enviarWA('${v.nombre}', '${v.talla}', '${v.precio}')" style="width:100%; padding:12px; background:#25d366; color:#fff; border:none; border-radius:8px; font-weight:700">WHATSAPP</button>
+    <button onclick="document.getElementById('modal-factura').style.display='none'" style="width:100%; margin-top:10px; background:none; border:none; color:var(--muted)">Cerrar</button>`;
 }
 
 window.enviarWA = (n, t, p) => {
-  const msg = `*Lovely Pijamas Studio*%0A¡Hola! Recibo de compra:%0A*Producto:* ${n}%0A*Talla:* ${t}%0A*Total:* $${p}%0A✨ ¡Gracias por preferirnos!`;
+  const msg = `*Lovely Pijamas Studio*%0A¡Hola! Recibo de compra:%0A*Producto:* ${n}%0A*Talla:* ${t}%0A*Total:* $${p}%0A✨ ¡Gracias!`;
   window.open(`https://wa.me/?text=${msg}`, '_blank');
 }
 
 function renderNuevo(container) {
   container.innerHTML = `<div class="card">
-    <h3 style="margin-bottom:15px">Nueva Pijama</h3>
+    <h3>Nueva Pijama</h3>
     <input type="text" id="n-nom" class="input" placeholder="Nombre">
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
       <input type="number" id="n-costo" class="input" placeholder="Costo $">
@@ -177,7 +211,7 @@ function renderNuevo(container) {
       <input type="number" id="n-l" class="input" placeholder="L">
       <input type="number" id="n-xl" class="input" placeholder="XL">
     </div>
-    <button class="btn-gold" onclick="crear()">Guardar</button>
+    <button class="btn-gold" onclick="crear()">Guardar en Stock</button>
   </div>`;
 }
 
@@ -194,10 +228,10 @@ window.crear = function() {
 }
 
 function renderHistorial(container) {
-  let html = '<div class="card"><h3>Ventas</h3>';
+  let html = '<div class="card"><h3>Historial de Ventas</h3>';
   [...window.historialVentas].reverse().forEach((v, idx) => {
     html += `<div class="venta-item">
-      <div><strong>${v.nombre}</strong><br><small>${v.fecha}</small></div>
+      <div><strong>${v.nombre}</strong> (${v.talla})<br><small>${v.fecha}</small></div>
       <div style="text-align:right">$${v.precio}<br><button onclick="elimVenta(${window.historialVentas.length - 1 - idx})" style="color:var(--red); border:none; background:none; font-size:10px">Borrar</button></div>
     </div>`;
   });
@@ -205,14 +239,57 @@ function renderHistorial(container) {
 }
 
 function renderBalance(container) {
-  let art = 0, gan = 0;
-  window.historialVentas.forEach(v => { gan += (v.precio - v.costo); });
-  window.productos.forEach(p => { art += Object.values(p.tallas).reduce((a,b)=>a+b,0); });
-  container.innerHTML = `<div class="card"><h3>Finanzas</h3><p>Prendas en stock: ${art}</p><p style="color:var(--green); font-size:20px">Ganancia Neta: $${gan}</p></div>`;
+  let inversionEnStock = 0;
+  let gananciaProyectadaStock = 0;
+  let gananciaRealVentas = 0;
+  let totalArticulos = 0;
+
+  // Calcular lo que hay en el inventario actual
+  window.productos.forEach(p => {
+    const stockTotal = Object.values(p.tallas).reduce((a, b) => a + b, 0);
+    inversionEnStock += (p.costo * stockTotal);
+    gananciaProyectadaStock += ((p.precioVenta - p.costo) * stockTotal);
+    totalArticulos += stockTotal;
+  });
+
+  // Calcular lo que ya se ganó con ventas pasadas
+  window.historialVentas.forEach(v => {
+    gananciaRealVentas += (v.precio - v.costo);
+  });
+
+  container.innerHTML = `
+    <div class="card">
+      <h3 style="margin-bottom:15px; border-bottom:1px solid var(--warm2); padding-bottom:10px">Balance Lovely</h3>
+      
+      <div class="venta-item">
+        <span>Artículos en Stock:</span>
+        <strong>${totalArticulos} u.</strong>
+      </div>
+
+      <div class="venta-item">
+        <span>Inversión Actual:</span>
+        <strong style="color:var(--ink)">$${inversionEnStock}</strong>
+      </div>
+
+      <div class="venta-item" style="background:rgba(52, 152, 219, 0.05); padding:10px; border-radius:8px; margin:10px 0">
+        <span style="color:var(--blue)">Ganancia por vender stock:</span>
+        <strong style="color:var(--blue)">$${gananciaProyectadaStock}</strong>
+      </div>
+
+      <div class="venta-item" style="background:rgba(39, 174, 96, 0.1); padding:15px; border-radius:10px; margin-top:15px; border:none">
+        <span style="font-weight:bold; color:var(--green)">Ganancia Real (Caja):</span>
+        <strong style="font-size:20px; color:var(--green)">$${gananciaRealVentas}</strong>
+      </div>
+      
+      <p style="font-size:10px; color:var(--muted); margin-top:20px; text-align:center">
+        *La ganancia por vender stock es lo que recibirás al liquidar la mercancía actual.
+      </p>
+    </div>
+  `;
 }
 
-window.elimProd = (idx) => { if(confirm("¿Eliminar?")) { window.productos.splice(idx,1); window.guardarStock(window.productos); } }
-window.elimVenta = (idx) => { if(confirm("¿Borrar venta?")) { window.historialVentas.splice(idx,1); window.guardarVentas(window.historialVentas); irA('ventas'); } }
+window.elimProd = (idx) => { if(confirm("¿Eliminar producto?")) { window.productos.splice(idx,1); window.guardarStock(window.productos); } }
+window.elimVenta = (idx) => { if(confirm("¿Borrar registro de venta?")) { window.historialVentas.splice(idx,1); window.guardarVentas(window.historialVentas); irA('ventas'); } }
 
 window.onload = () => { setTimeout(() => irA('stock'), 500); };
 </script>
