@@ -159,4 +159,62 @@ function mostrarFactura(v) {
 }
 
 window.enviarWA = (n, t, p) => {
-  const msg = `*Lovely Pijamas Studio*%0A¡Hola! Recibo de compra:%0A*
+  const msg = `*Lovely Pijamas Studio*%0A¡Hola! Recibo de compra:%0A*Producto:* ${n}%0A*Talla:* ${t}%0A*Total:* $${p}%0A✨ ¡Gracias por preferirnos!`;
+  window.open(`https://wa.me/?text=${msg}`, '_blank');
+}
+
+function renderNuevo(container) {
+  container.innerHTML = `<div class="card">
+    <h3 style="margin-bottom:15px">Nueva Pijama</h3>
+    <input type="text" id="n-nom" class="input" placeholder="Nombre">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+      <input type="number" id="n-costo" class="input" placeholder="Costo $">
+      <input type="number" id="n-venta" class="input" placeholder="Venta $">
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+      <input type="number" id="n-s" class="input" placeholder="S">
+      <input type="number" id="n-m" class="input" placeholder="M">
+      <input type="number" id="n-l" class="input" placeholder="L">
+      <input type="number" id="n-xl" class="input" placeholder="XL">
+    </div>
+    <button class="btn-gold" onclick="crear()">Guardar</button>
+  </div>`;
+}
+
+window.crear = function() {
+  const p = {
+    nombre: document.getElementById('n-nom').value || 'Sin nombre',
+    costo: parseFloat(document.getElementById('n-costo').value || 0),
+    precioVenta: parseFloat(document.getElementById('n-venta').value || 0),
+    tallas: { S: parseInt(document.getElementById('n-s').value || 0), M: parseInt(document.getElementById('n-m').value || 0), L: parseInt(document.getElementById('n-l').value || 0), XL: parseInt(document.getElementById('n-xl').value || 0) }
+  };
+  window.productos.push(p);
+  window.guardarStock(window.productos);
+  irA('stock');
+}
+
+function renderHistorial(container) {
+  let html = '<div class="card"><h3>Ventas</h3>';
+  [...window.historialVentas].reverse().forEach((v, idx) => {
+    html += `<div class="venta-item">
+      <div><strong>${v.nombre}</strong><br><small>${v.fecha}</small></div>
+      <div style="text-align:right">$${v.precio}<br><button onclick="elimVenta(${window.historialVentas.length - 1 - idx})" style="color:var(--red); border:none; background:none; font-size:10px">Borrar</button></div>
+    </div>`;
+  });
+  container.innerHTML = html + '</div>';
+}
+
+function renderBalance(container) {
+  let art = 0, gan = 0;
+  window.historialVentas.forEach(v => { gan += (v.precio - v.costo); });
+  window.productos.forEach(p => { art += Object.values(p.tallas).reduce((a,b)=>a+b,0); });
+  container.innerHTML = `<div class="card"><h3>Finanzas</h3><p>Prendas en stock: ${art}</p><p style="color:var(--green); font-size:20px">Ganancia Neta: $${gan}</p></div>`;
+}
+
+window.elimProd = (idx) => { if(confirm("¿Eliminar?")) { window.productos.splice(idx,1); window.guardarStock(window.productos); } }
+window.elimVenta = (idx) => { if(confirm("¿Borrar venta?")) { window.historialVentas.splice(idx,1); window.guardarVentas(window.historialVentas); irA('ventas'); } }
+
+window.onload = () => { setTimeout(() => irA('stock'), 500); };
+</script>
+</body>
+</html>
