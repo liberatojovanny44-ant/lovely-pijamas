@@ -7,48 +7,44 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a1714">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
 <style>
 :root {
   --gold: #c9a84c; --gold-dark: #8a6520; --ink: #1a1714; --warm: #f7f4ef; --warm2: #efe9de;
-  --muted: #9b8f80; --white: #ffffff; --green: #27ae60;
+  --muted: #9b8f80; --white: #ffffff; --green: #27ae60; --red: #e74c3c;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { font-family: -apple-system, sans-serif; background: var(--warm); color: var(--ink); padding-bottom: 90px; }
+body { font-family: -apple-system, sans-serif; background: var(--warm); color: var(--ink); padding-bottom: 100px; }
 
-/* PANTALLA CARGA */
-#loading-screen { position: fixed; inset: 0; background: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; transition: 0.5s; }
-.brand-name { font-family: Georgia, serif; font-size: 28px; color: var(--gold); letter-spacing: 4px; text-transform: uppercase; }
-.spinner { width: 30px; height: 30px; border: 3px solid rgba(201,168,76,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin-top: 15px; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* HEADER */
 header { background: var(--ink); padding: 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 200; }
-.brand-sub { font-size: 8px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; }
+.brand-name { font-family: Georgia, serif; font-size: 18px; color: var(--gold); letter-spacing: 4px; text-transform: uppercase; }
 .sync-dot { width: 10px; height: 10px; background: #444; border-radius: 50%; border: 2px solid #000; transition: 0.3s; }
 
-/* NAVEGACIÓN */
-.nav-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: var(--ink); display: flex; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,0.1); }
+.nav-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: var(--ink); display: flex; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,0.1); z-index: 1000; }
 .nav-link { flex: 1; display: flex; flex-direction: column; align-items: center; color: rgba(255,255,255,0.3); font-size: 10px; background: none; border: none; gap: 5px; }
 .nav-link.active { color: var(--gold); }
 
-/* UI */
-.card { background: #fff; border-radius: 20px; padding: 20px; border: 1px solid var(--warm2); margin: 15px; }
-.input { width: 100%; border: 1.5px solid var(--warm2); border-radius: 12px; padding: 14px; margin-bottom: 12px; background: var(--warm); font-size: 16px; }
+.card { background: #fff; border-radius: 20px; padding: 20px; border: 1px solid var(--warm2); margin: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+.input { width: 100%; border: 1.5px solid var(--warm2); border-radius: 12px; padding: 14px; margin-bottom: 10px; background: var(--warm); font-size: 16px; outline: none; }
 .btn-gold { width: 100%; background: var(--ink); color: var(--gold); border: none; border-radius: 14px; padding: 16px; font-weight: 600; text-transform: uppercase; cursor: pointer; }
 
-.prod-card { background: #fff; border-radius: 18px; padding: 16px; border: 1px solid var(--warm2); margin-bottom: 12px; }
+.prod-card { background: #fff; border-radius: 18px; padding: 16px; border: 1px solid var(--warm2); margin: 12px 15px; }
 .tallas-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
-.talla-btn { background: var(--warm); border: 1.5px solid var(--warm2); border-radius: 12px; padding: 12px 5px; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+.talla-btn { background: var(--warm); border: 1.5px solid var(--warm2); border-radius: 12px; padding: 10px 5px; display: flex; flex-direction: column; align-items: center; }
+
+#modal-factura { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
+.recibo { background: #fff; width: 100%; max-width: 350px; border-radius: 10px; padding: 25px; font-family: 'Courier New', Courier, monospace; position: relative; }
+.recibo-header { text-align: center; border-bottom: 1px dashed #ccc; padding-bottom: 15px; margin-bottom: 15px; }
+.venta-item { padding: 8px 0; border-bottom: 1px solid var(--warm2); display: flex; justify-content: space-between; font-size: 12px; }
 </style>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+  // DATOS DE FIREBASE YA INTEGRADOS
   const firebaseConfig = {
     databaseURL: "https://lovelypijamas-97662-default-rtdb.firebaseio.com/", 
     projectId: "lovelypijamas-97662"
@@ -57,124 +53,110 @@ header { background: var(--ink); padding: 20px; display: flex; justify-content: 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const stockRef = ref(db, 'inventario/');
+  const ventasRef = ref(db, 'ventas/');
 
   onValue(stockRef, (snapshot) => {
     window.productos = snapshot.val() || [];
-    if(window.renderStock) window.renderStock();
+    window.renderActual(); 
     document.querySelector('.sync-dot').style.background = '#27ae60';
   });
 
-  window.guardarEnNube = (data) => set(stockRef, data);
-</script>
+  onValue(ventasRef, (snapshot) => {
+    window.historialVentas = snapshot.val() || [];
+  });
 
+  window.guardarStock = (data) => set(stockRef, data);
+  window.guardarVentas = (data) => set(ventasRef, data);
+</script>
 </head>
 <body>
 
-<div id="loading-screen"><div class="brand-name">Lovely</div><div class="spinner"></div></div>
-
 <header>
-  <div><div class="brand-name" style="font-size:18px">Lovely</div><div class="brand-sub">Pijamas Studio</div></div>
+  <div><div class="brand-name">Lovely</div><div style="font-size:8px; color:var(--muted); letter-spacing:3px">STUDIO</div></div>
   <div class="sync-dot"></div>
 </header>
 
 <main id="app"></main>
 
+<div id="modal-factura"><div class="recibo" id="recibo-content"></div></div>
+
 <nav class="nav-bottom">
-  <button class="nav-link active" id="btn-stock" onclick="irA('stock')"><i class="fas fa-layer-group"></i>Stock</button>
-  <button class="nav-link" id="btn-nuevo" onclick="irA('nuevo')"><i class="fas fa-plus-circle"></i>Nuevo</button>
+  <button class="nav-link active" id="btn-stock" onclick="irA('stock')"><i class="fas fa-box"></i>Stock</button>
+  <button class="nav-link" id="btn-nuevo" onclick="irA('nuevo')"><i class="fas fa-plus"></i>Nuevo</button>
+  <button class="nav-link" id="btn-ventas" onclick="irA('ventas')"><i class="fas fa-history"></i>Ventas</button>
+  <button class="nav-link" id="btn-balance" onclick="irA('balance')"><i class="fas fa-chart-line"></i>Balance</button>
 </nav>
 
 <script>
 window.productos = [];
-
-if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
+window.historialVentas = [];
+let vistaActual = 'stock';
 
 function irA(vista) {
+  vistaActual = vista;
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
   document.getElementById('btn-' + vista).classList.add('active');
-  if(vista === 'stock') renderStock();
-  if(vista === 'nuevo') renderNuevo();
+  window.renderActual();
 }
 
-window.renderStock = function() {
+window.renderActual = function() {
   const app = document.getElementById('app');
-  if(window.productos.length === 0) {
-    app.innerHTML = '<div style="text-align:center; padding:100px 20px; color:var(--muted)">Inventario vacío. Agrega una pijama en "Nuevo".</div>';
-    return;
-  }
+  if(vistaActual === 'stock') renderStock(app);
+  if(vistaActual === 'nuevo') renderNuevo(app);
+  if(vistaActual === 'ventas') renderHistorial(app);
+  if(vistaActual === 'balance') renderBalance(app);
+}
+
+function renderStock(container) {
   let html = '';
   window.productos.forEach((p, i) => {
-    html += `<div class="prod-card" style="margin:15px">
-      <div style="display:flex; justify-content:space-between; font-weight:600">
-        <span>${p.nombre}</span><span style="color:var(--gold-dark)">$${p.precio}</span>
+    html += `<div class="prod-card">
+      <div style="display:flex; justify-content:space-between; margin-bottom:5px">
+        <span style="font-weight:700; font-family:Georgia">${p.nombre}</span>
+        <span style="color:var(--gold-dark); font-weight:700">$${p.precioVenta}</span>
       </div>
       <div class="tallas-grid">
-        ${['S','M','L','XL'].map(t => `
-          <button class="talla-btn" onclick="vender(${i}, '${t}')">
-            <span style="font-size:10px; color:var(--muted)">${t}</span>
-            <span style="font-size:18px; font-weight:700">${p.tallas[t] || 0}</span>
-          </button>
-        `).join('')}
+        ${['S','M','L','XL'].map(t => `<button class="talla-btn" onclick="prepararVenta(${i}, '${t}')">
+          <span style="font-size:9px; color:var(--muted)">${t}</span>
+          <span style="font-size:18px; font-weight:700">${p.tallas[t] || 0}</span>
+        </button>`).join('')}
       </div>
-      <button onclick="eliminar(${i})" style="margin-top:12px; background:none; border:none; color:var(--muted); font-size:10px; text-decoration:underline">ELIMINAR REFERENCIA</button>
+      <button onclick="eliminarProd(${i})" style="margin-top:12px; background:none; border:none; color:var(--red); font-size:10px">ELIMINAR PRODUCTO</button>
     </div>`;
   });
-  app.innerHTML = html;
+  container.innerHTML = html || '<p style="text-align:center; padding:50px">Cargando inventario...</p>';
 }
 
-function renderNuevo() {
-  document.getElementById('app').innerHTML = `
-    <div class="card">
-      <h3 style="margin-bottom:15px">Nueva Pijama</h3>
-      <input type="text" id="n-nom" class="input" placeholder="Nombre (Ej: Pijama Seda)">
-      <input type="number" id="n-pre" class="input" placeholder="Precio $">
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-        <input type="number" id="n-s" class="input" placeholder="Cant. S">
-        <input type="number" id="n-m" class="input" placeholder="Cant. M">
-        <input type="number" id="n-l" class="input" placeholder="Cant. L">
-        <input type="number" id="n-xl" class="input" placeholder="Cant. XL">
-      </div>
-      <button class="btn-gold" onclick="crear()">Guardar en la Nube</button>
+function prepararVenta(idx, talla) {
+  if(window.productos[idx].tallas[talla] > 0) {
+    const p = window.productos[idx];
+    const fecha = new Date().toLocaleString();
+    const idVenta = "FAC-" + Math.floor(Math.random()*9000+1000);
+    const venta = { nombre: p.nombre, talla: talla, precio: p.precioVenta, costo: p.costo, fecha: fecha, id: idVenta };
+    
+    window.historialVentas.push(venta);
+    window.productos[idx].tallas[talla]--;
+    window.guardarStock(window.productos);
+    window.guardarVentas(window.historialVentas);
+    mostrarFactura(venta);
+  }
+}
+
+function mostrarFactura(v) {
+  document.getElementById('modal-factura').style.display = 'flex';
+  document.getElementById('recibo-content').innerHTML = `
+    <div class="recibo-header">
+      <h2 style="font-family:Georgia; letter-spacing:2px">LOVELY</h2>
+      <p style="font-size:10px">Pijamas · Studio</p>
+      <p style="font-size:9px">${v.fecha}</p>
+    </div>
+    <div style="margin:15px 0">1x ${v.nombre} [${v.talla}] - $${v.precio}</div>
+    <div style="display:flex; justify-content:space-between; font-weight:700; font-size:18px"><span>TOTAL</span><span>$${v.precio}</span></div>
+    <div style="text-align:center; margin-top:20px">
+      <button onclick="enviarWA('${v.nombre}', '${v.talla}', '${v.precio}')" style="width:100%; padding:12px; background:#25d366; color:#fff; border:none; border-radius:8px; font-weight:700; margin-bottom:10px">WHATSAPP</button>
+      <button onclick="document.getElementById('modal-factura').style.display='none'" style="border:none; background:none; color:var(--muted)">Cerrar</button>
     </div>`;
 }
 
-window.crear = function() {
-  const p = {
-    nombre: document.getElementById('n-nom').value,
-    precio: document.getElementById('n-pre').value,
-    tallas: {
-      S: parseInt(document.getElementById('n-s').value || 0),
-      M: parseInt(document.getElementById('n-m').value || 0),
-      L: parseInt(document.getElementById('n-l').value || 0),
-      XL: parseInt(document.getElementById('n-xl').value || 0)
-    }
-  };
-  window.productos.push(p);
-  window.guardarEnNube(window.productos);
-  irA('stock');
-}
-
-window.vender = function(idx, talla) {
-  if(window.productos[idx].tallas[talla] > 0) {
-    window.productos[idx].tallas[talla]--;
-    window.guardarEnNube(window.productos);
-  }
-}
-
-window.eliminar = function(idx) {
-  if(confirm("¿Eliminar este producto de todos los dispositivos?")) {
-    window.productos.splice(idx, 1);
-    window.guardarEnNube(window.productos);
-  }
-}
-
-window.onload = () => {
-  setTimeout(() => {
-    document.getElementById('loading-screen').style.opacity = '0';
-    setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 500);
-    irA('stock');
-  }, 1000);
-};
-</script>
-</body>
-</html>
+window.enviarWA = (n, t, p) => {
+  const msg = `*Lovely Pijamas Studio*%0A¡Hola! Recibo de compra:%0A*
