@@ -8,1075 +8,173 @@
 <meta name="theme-color" content="#1a1714">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Lovely">
 <link rel="apple-touch-icon" href="icon-192.png">
-
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 <style>
 :root {
-  --gold: #c9a84c;
-  --gold-light: #e8d5a3;
-  --gold-dark: #8a6520;
-  --ink: #1a1714;
-  --warm: #f7f4ef;
-  --warm2: #efe9de;
-  --muted: #9b8f80;
-  --white: #ffffff;
-  --red: #c0392b;
-  --green: #27ae60;
-  --blue: #2980b9;
+  --gold: #c9a84c; --gold-dark: #8a6520; --ink: #1a1714; --warm: #f7f4ef; --warm2: #efe9de;
+  --muted: #9b8f80; --white: #ffffff; --green: #27ae60;
 }
-
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, sans-serif; background: var(--warm); color: var(--ink); padding-bottom: 90px; }
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--warm);
-  color: var(--ink);
-  min-height: 100vh;
-  padding-bottom: 90px;
-}
-
-/* ── LOADING SCREEN ── */
-#loading-screen {
-  position: fixed; inset: 0;
-  background: var(--ink);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  z-index: 9999;
-  gap: 16px;
-}
-#loading-screen .brand-name {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 28px; font-weight: 600;
-  color: var(--gold); letter-spacing: 4px; text-transform: uppercase;
-}
-#loading-screen .brand-sub {
-  font-size: 9px; letter-spacing: 5px;
-  color: var(--muted); text-transform: uppercase;
-}
-.spinner {
-  width: 32px; height: 32px;
-  border: 3px solid rgba(201,168,76,0.2);
-  border-top-color: var(--gold);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-top: 8px;
-}
+/* PANTALLA CARGA */
+#loading-screen { position: fixed; inset: 0; background: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; transition: 0.5s; }
+.brand-name { font-family: Georgia, serif; font-size: 28px; color: var(--gold); letter-spacing: 4px; text-transform: uppercase; }
+.spinner { width: 30px; height: 30px; border: 3px solid rgba(201,168,76,0.2); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin-top: 15px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── HEADER ── */
-header {
-  background: var(--ink);
-  padding: 18px 20px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 200;
-}
-.brand { display: flex; flex-direction: column; }
-.brand-name {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--gold);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  line-height: 1;
-}
-.brand-sub {
-  font-size: 8px;
-  letter-spacing: 5px;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-top: 4px;
-}
-.header-actions { display: flex; gap: 10px; }
-.btn-icon {
-  width: 40px; height: 40px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.05);
-  color: var(--gold-light);
-  font-size: 14px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
-}
-.btn-icon:active { background: rgba(201,168,76,0.2); transform: scale(0.94); }
+/* HEADER */
+header { background: var(--ink); padding: 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 200; }
+.brand-sub { font-size: 8px; letter-spacing: 4px; color: var(--muted); text-transform: uppercase; }
+.sync-dot { width: 10px; height: 10px; background: #444; border-radius: 50%; border: 2px solid #000; transition: 0.3s; }
 
-/* sync indicator */
-.sync-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--green);
-  position: absolute; top: 6px; right: 6px;
-  animation: pulse 2s infinite;
-}
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-/* ── NAV ── */
-.nav-bottom {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  background: var(--ink);
-  display: flex;
-  padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
-  z-index: 200;
-  border-top: 1px solid rgba(255,255,255,0.06);
-}
-.nav-link {
-  flex: 1;
-  display: flex; flex-direction: column; align-items: center;
-  color: rgba(255,255,255,0.25);
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  border: none;
-  background: none;
-  cursor: pointer;
-  gap: 5px;
-  transition: color 0.2s;
-  padding: 4px 0;
-}
-.nav-link i { font-size: 18px; }
+/* NAVEGACIÓN */
+.nav-bottom { position: fixed; bottom: 0; left: 0; right: 0; background: var(--ink); display: flex; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255,255,255,0.1); }
+.nav-link { flex: 1; display: flex; flex-direction: column; align-items: center; color: rgba(255,255,255,0.3); font-size: 10px; background: none; border: none; gap: 5px; }
 .nav-link.active { color: var(--gold); }
 
-/* ── CARDS ── */
-.card {
-  background: var(--white);
-  border-radius: 18px;
-  padding: 20px;
-  border: 1px solid var(--warm2);
-}
-.section-title {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--ink);
-  letter-spacing: 1px;
-  margin-bottom: 16px;
-}
+/* UI */
+.card { background: #fff; border-radius: 20px; padding: 20px; border: 1px solid var(--warm2); margin: 15px; }
+.input { width: 100%; border: 1.5px solid var(--warm2); border-radius: 12px; padding: 14px; margin-bottom: 12px; background: var(--warm); font-size: 16px; }
+.btn-gold { width: 100%; background: var(--ink); color: var(--gold); border: none; border-radius: 14px; padding: 16px; font-weight: 600; text-transform: uppercase; cursor: pointer; }
 
-/* ── INPUTS ── */
-.field { margin-bottom: 14px; }
-.field label {
-  display: block;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-.input {
-  width: 100%;
-  border: 1.5px solid var(--warm2);
-  border-radius: 12px;
-  padding: 12px 14px;
-  font-size: 15px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--warm);
-  color: var(--ink);
-  outline: none;
-  transition: all 0.2s;
-}
-.input:focus { border-color: var(--gold); background: #fff; }
-.input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.input-3 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
-.talla-field { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.talla-field span { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 1px; }
-.talla-field .input { text-align: center; padding: 10px 4px; }
-
-/* ── BTNS ── */
-.btn-gold {
-  width: 100%;
-  background: var(--ink);
-  color: var(--gold);
-  border: none;
-  border-radius: 14px;
-  padding: 16px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-top: 8px;
-}
-.btn-gold:active { transform: scale(0.97); opacity: 0.85; }
-
-/* ── SEARCH ── */
-.search-wrap { position: relative; margin-bottom: 16px; }
-.search-wrap i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; }
-.search-wrap .input { padding-left: 38px; background: #fff; }
-
-/* ── PRODUCTO CARD ── */
-.prod-card {
-  background: var(--white);
-  border-radius: 18px;
-  padding: 16px;
-  border: 1px solid var(--warm2);
-  margin-bottom: 12px;
-  animation: fadeUp 0.3s ease;
-}
-@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-.prod-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-.prod-name { font-family: Georgia, 'Times New Roman', serif; font-size: 17px; font-weight: 600; color: var(--ink); line-height: 1.2; }
-.prod-price { font-size: 18px; font-weight: 600; color: var(--gold-dark); margin-top: 2px; }
-.prod-cost { font-size: 11px; color: var(--muted); margin-top: 1px; }
-.prod-actions { display: flex; gap: 6px; }
-.btn-sm {
-  width: 34px; height: 34px;
-  border-radius: 10px;
-  border: 1.5px solid var(--warm2);
-  background: var(--warm);
-  color: var(--muted);
-  font-size: 12px;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s;
-}
-.btn-sm:active { transform: scale(0.9); }
-.btn-sm.danger:active { color: var(--red); border-color: var(--red); }
-
-.colores-wrap { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.color-tag {
-  font-size: 10px; font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 20px;
-  border: 1.5px solid var(--warm2);
-  background: var(--warm);
-  color: var(--muted);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.tallas-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.talla-btn {
-  background: var(--warm);
-  border: 1.5px solid var(--warm2);
-  border-radius: 12px;
-  padding: 10px 4px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  cursor: pointer;
-  transition: all 0.12s;
-  position: relative;
-}
-.talla-btn:active { transform: scale(0.9); background: var(--warm2); }
-.talla-btn .t-label { font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
-.talla-btn .t-qty { font-size: 20px; font-weight: 600; color: var(--ink); line-height: 1; }
-.talla-btn.zero .t-qty { color: #ddd; }
-.talla-hint { text-align: center; font-size: 9px; color: var(--muted); margin-top: 8px; letter-spacing: 1px; text-transform: uppercase; }
-
-.quick-actions { display: flex; gap: 8px; margin-bottom: 8px; }
-.btn-action {
-  flex: 1; padding: 8px 4px;
-  border-radius: 10px;
-  border: 1.5px solid var(--warm2);
-  background: var(--warm);
-  font-size: 10px; font-weight: 600;
-  letter-spacing: 1px; text-transform: uppercase;
-  color: var(--muted);
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 5px;
-  transition: all 0.15s;
-}
-.btn-action:active { background: var(--warm2); }
-.btn-action.sell { color: var(--green); border-color: #b7e4c7; background: #f0faf4; }
-.btn-action.restock { color: var(--blue); border-color: #aed6f1; background: #eaf4fb; }
-
-/* ── BALANCE ── */
-.balance-hero {
-  background: var(--ink);
-  border-radius: 20px;
-  padding: 28px 20px;
-  text-align: center;
-  margin-bottom: 14px;
-}
-.balance-label { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 8px; }
-.balance-amount { font-family: Georgia, 'Times New Roman', serif; font-size: 48px; font-weight: 300; color: var(--gold); line-height: 1; }
-.balance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 20px; }
-.balance-item p:first-child { font-size: 9px; letter-spacing: 2px; color: rgba(255,255,255,0.25); text-transform: uppercase; margin-bottom: 4px; }
-.balance-item p:last-child { font-size: 18px; font-weight: 600; }
-.bal-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-.bal-mini-card {
-  background: var(--white);
-  border-radius: 16px;
-  padding: 16px;
-  border: 1px solid var(--warm2);
-  text-align: center;
-}
-.bal-mini-card .bm-label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-.bal-mini-card .bm-val { font-family: Georgia, 'Times New Roman', serif; font-size: 28px; font-weight: 600; color: var(--ink); }
-
-/* ── HISTORIAL ── */
-.hist-item {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--warm2);
-}
-.hist-item:last-child { border-bottom: none; }
-.hist-left { display: flex; flex-direction: column; gap: 2px; }
-.hist-name { font-weight: 500; font-size: 14px; color: var(--ink); }
-.hist-meta { font-size: 11px; color: var(--muted); }
-.hist-badge {
-  font-size: 10px; font-weight: 700;
-  padding: 4px 10px; border-radius: 20px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-.hist-badge.venta { background: #eafaf1; color: var(--green); }
-.hist-badge.entrada { background: #eaf4fb; color: var(--blue); }
-
-/* ── GRÁFICA ── */
-.chart-wrap { padding: 10px 0; }
-.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.bar-label { font-size: 11px; font-weight: 500; color: var(--ink); width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bar-track { flex: 1; background: var(--warm2); border-radius: 6px; height: 10px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--gold-dark), var(--gold)); transition: width 0.6s ease; }
-.bar-val { font-size: 11px; font-weight: 600; color: var(--gold-dark); width: 40px; text-align: right; }
-
-/* ── MODAL ── */
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(26,23,20,0.6);
-  backdrop-filter: blur(4px);
-  z-index: 500;
-  display: flex; align-items: flex-end; justify-content: center;
-  animation: fadeIn 0.2s ease;
-}
-.modal-overlay.hidden { display: none; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-.modal-box {
-  background: var(--white);
-  border-radius: 24px 24px 0 0;
-  width: 100%;
-  max-width: 500px;
-  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
-  animation: slideUp 0.25s ease;
-}
-@keyframes slideUp { from { transform: translateY(30px); } to { transform: translateY(0); } }
-.modal-title { font-family: Georgia, 'Times New Roman', serif; font-size: 20px; font-weight: 600; margin-bottom: 16px; color: var(--ink); }
-.modal-actions { display: flex; gap: 10px; margin-top: 16px; }
-.btn-cancel {
-  flex: 1; padding: 14px;
-  border-radius: 12px;
-  border: 1.5px solid var(--warm2);
-  background: var(--warm);
-  font-size: 13px; font-weight: 600;
-  color: var(--muted); cursor: pointer;
-}
-.btn-confirm {
-  flex: 2; padding: 14px;
-  border-radius: 12px;
-  border: none;
-  background: var(--ink);
-  color: var(--gold);
-  font-size: 13px; font-weight: 600;
-  letter-spacing: 1px; cursor: pointer;
-}
-.tallas-modal { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
-.talla-modal-btn {
-  border: 1.5px solid var(--warm2);
-  border-radius: 12px;
-  padding: 12px 4px;
-  background: var(--warm);
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  cursor: pointer; transition: all 0.15s;
-}
-.talla-modal-btn.selected { border-color: var(--gold); background: #fdf9ee; }
-.talla-modal-btn .t-l { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 1px; }
-.talla-modal-btn .t-q { font-size: 18px; font-weight: 600; color: var(--ink); }
-
-/* ── TOAST ── */
-.toast {
-  position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-  background: var(--ink); color: var(--gold-light);
-  padding: 10px 20px; border-radius: 40px;
-  font-size: 13px; font-weight: 500;
-  z-index: 999;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.25s;
-  white-space: nowrap;
-}
-.toast.show { opacity: 1; }
-
-/* ── COLORES INPUT ── */
-.colores-input-wrap { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px; background: var(--warm); border-radius: 12px; border: 1.5px solid var(--warm2); min-height: 48px; align-items: center; cursor: text; }
-.color-chip {
-  background: var(--ink); color: var(--gold-light);
-  font-size: 11px; font-weight: 600;
-  padding: 4px 10px 4px 10px;
-  border-radius: 20px; display: flex; align-items: center; gap: 6px;
-  text-transform: uppercase; letter-spacing: 0.5px;
-}
-.color-chip button { background: none; border: none; color: var(--gold-light); opacity: 0.5; cursor: pointer; font-size: 11px; line-height: 1; }
-#color-input-field { border: none; outline: none; background: transparent; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-width: 80px; flex: 1; color: var(--ink); }
-
-/* ── EMPTY ── */
-.empty-state { text-align: center; padding: 60px 20px; }
-.empty-state i { font-size: 40px; color: var(--warm2); margin-bottom: 12px; }
-.empty-state p { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-
-/* ── FILTRO ── */
-.filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; scrollbar-width: none; }
-.filter-row::-webkit-scrollbar { display: none; }
-.filter-chip {
-  flex-shrink: 0; padding: 6px 14px;
-  border-radius: 20px; border: 1.5px solid var(--warm2);
-  background: var(--white); font-size: 11px; font-weight: 600;
-  color: var(--muted); cursor: pointer; transition: all 0.15s;
-  white-space: nowrap; letter-spacing: 0.5px;
-}
-.filter-chip.active { background: var(--ink); color: var(--gold); border-color: var(--ink); }
-
-/* ── RECIBO ── */
-.recibo-overlay {
-  position: fixed; inset: 0;
-  background: rgba(26,23,20,0.7);
-  backdrop-filter: blur(6px);
-  z-index: 600;
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px;
-}
-.recibo-overlay.hidden { display: none; }
-.recibo-box {
-  background: white;
-  border-radius: 20px;
-  width: 100%; max-width: 360px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-}
-.recibo-header { background: var(--ink); padding: 24px 20px 20px; text-align: center; }
-.recibo-brand { font-family: Georgia, serif; font-size: 26px; font-weight: 600; color: var(--gold); letter-spacing: 4px; text-transform: uppercase; }
-.recibo-sub { font-size: 9px; letter-spacing: 4px; color: rgba(255,255,255,0.3); text-transform: uppercase; margin-top: 4px; }
-.recibo-num { font-size: 10px; color: rgba(255,255,255,0.2); margin-top: 10px; letter-spacing: 1px; }
-.recibo-body { padding: 20px; }
-.recibo-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px dashed var(--warm2); font-size: 14px; }
-.recibo-row:last-of-type { border-bottom: none; }
-.recibo-row .r-label { color: var(--muted); font-size: 12px; }
-.recibo-row .r-val { font-weight: 600; color: var(--ink); text-align: right; }
-.recibo-total { background: var(--warm); border-radius: 12px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; margin: 12px 0; }
-.recibo-total .t-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
-.recibo-total .t-amount { font-family: Georgia, serif; font-size: 26px; font-weight: 600; color: var(--green); }
-.recibo-pago { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
-.recibo-fecha { text-align: center; font-size: 10px; color: var(--muted); margin-bottom: 16px; }
-.recibo-gracias { text-align: center; font-family: Georgia, serif; font-size: 13px; font-style: italic; color: var(--muted); padding: 12px 0; border-top: 1px dashed var(--warm2); margin-bottom: 16px; }
-.recibo-actions { display: flex; gap: 10px; padding: 0 20px 20px; }
-.btn-recibo { flex: 1; padding: 14px; border-radius: 12px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-.btn-recibo.share { background: var(--ink); color: var(--gold); }
-.btn-recibo.close { background: var(--warm); color: var(--muted); border: 1.5px solid var(--warm2); }
-.btn-recibo:active { transform: scale(0.96); }
-
-.tabs { display: flex; gap: 0; margin-bottom: 16px; background: var(--warm2); border-radius: 12px; padding: 3px; }
-.tab-btn { flex: 1; padding: 9px; border-radius: 10px; border: none; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; background: transparent; color: var(--muted); transition: all 0.2s; }
-.tab-btn.active { background: var(--white); color: var(--ink); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-
-.p-4 { padding: 16px; }
+.prod-card { background: #fff; border-radius: 18px; padding: 16px; border: 1px solid var(--warm2); margin-bottom: 12px; }
+.tallas-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+.talla-btn { background: var(--warm); border: 1.5px solid var(--warm2); border-radius: 12px; padding: 12px 5px; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
 </style>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  const firebaseConfig = {
+    databaseURL: "https://lovelypijamas-97662-default-rtdb.firebaseio.com/", 
+    projectId: "lovelypijamas-97662"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const stockRef = ref(db, 'inventario/');
+
+  onValue(stockRef, (snapshot) => {
+    window.productos = snapshot.val() || [];
+    if(window.renderStock) window.renderStock();
+    document.querySelector('.sync-dot').style.background = '#27ae60';
+  });
+
+  window.guardarEnNube = (data) => set(stockRef, data);
+</script>
+
 </head>
 <body>
 
-<!-- Pantalla de carga -->
-<div id="loading-screen">
-  <div class="brand-name">Lovely</div>
-  <div class="brand-sub">Pijamas · Studio</div>
-  <div class="spinner"></div>
-</div>
+<div id="loading-screen"><div class="brand-name">Lovely</div><div class="spinner"></div></div>
 
 <header>
-  <div class="brand">
-    <div class="brand-name">Lovely</div>
-    <div class="brand-sub">Pijamas · Studio</div>
-  </div>
-  <div class="header-actions">
-    <button class="btn-icon" onclick="descargarExcel()" title="Exportar Excel" style="position:relative">
-      <i class="fas fa-file-excel"></i>
-      <span class="sync-dot"></span>
-    </button>
-  </div>
+  <div><div class="brand-name" style="font-size:18px">Lovely</div><div class="brand-sub">Pijamas Studio</div></div>
+  <div class="sync-dot"></div>
 </header>
 
-<main id="app" class="p-4"></main>
+<main id="app"></main>
 
 <nav class="nav-bottom">
   <button class="nav-link active" id="btn-stock" onclick="irA('stock')"><i class="fas fa-layer-group"></i>Stock</button>
   <button class="nav-link" id="btn-nuevo" onclick="irA('nuevo')"><i class="fas fa-plus-circle"></i>Nuevo</button>
-  <button class="nav-link" id="btn-historial" onclick="irA('historial')"><i class="fas fa-clock-rotate-left"></i>Historial</button>
-  <button class="nav-link" id="btn-balance" onclick="irA('balance')"><i class="fas fa-chart-pie"></i>Balance</button>
 </nav>
 
-<!-- Modal venta / entrada -->
-<div class="modal-overlay hidden" id="modal">
-  <div class="modal-box">
-    <div class="modal-title" id="modal-title">Registrar Venta</div>
-    <div id="modal-body"></div>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
-      <button class="btn-confirm" id="modal-confirm" onclick="confirmarModal()">Confirmar</button>
-    </div>
-  </div>
-</div>
+<script>
+window.productos = [];
 
-<!-- Modal recibo -->
-<div class="recibo-overlay hidden" id="recibo">
-  <div class="recibo-box">
-    <div class="recibo-header">
-      <div class="recibo-brand">LOVELY</div>
-      <div class="recibo-sub">Pijamas · Studio</div>
-      <div class="recibo-num" id="recibo-num"></div>
-    </div>
-    <div class="recibo-body" id="recibo-body"></div>
-    <div class="recibo-actions">
-      <button class="btn-recibo close" onclick="cerrarRecibo()">Cerrar</button>
-      <button class="btn-recibo share" onclick="compartirRecibo()"><i class="fas fa-share-nodes"></i> Compartir</button>
-    </div>
-  </div>
-</div>
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
 
-<div class="toast" id="toast"></div>
-
-<!-- ══ FIREBASE ══ -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, addDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCYef33k6G7eZqTAT6RXLK9b2YT0JnfmGM",
-  authDomain: "lovelypijamas-97662.firebaseapp.com",
-  projectId: "lovelypijamas-97662",
-  storageBucket: "lovelypijamas-97662.firebasestorage.app",
-  messagingSenderId: "364123012682",
-  appId: "1:364123012682:web:53c0f59825e26c364830b3"
-};
-
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
-
-// ── Variables globales ──
-window.inventario = [];
-window.historial = [];
-window.vista = 'stock';
-window.modalData = {};
-window.tallasSeleccionadas = {};
-window.busquedaActual = '';
-window.filtroTalla = 'todas';
-window.coloresForm = [];
-window.editId = null;
-window.histTab = 'todo';
-window.reciboData = {};
-
-// ── Escuchar inventario en tiempo real ──
-onSnapshot(query(collection(db, 'inventario')), snap => {
-  window.inventario = snap.docs.map(d => ({ firestoreId: d.id, ...d.data() }));
-  document.getElementById('loading-screen').style.display = 'none';
-  render();
-});
-
-// ── Escuchar historial en tiempo real ──
-onSnapshot(query(collection(db, 'historial'), orderBy('fecha', 'desc')), snap => {
-  window.historial = snap.docs.map(d => ({ firestoreId: d.id, ...d.data() }));
-  render();
-});
-
-// Ocultar pantalla de carga después de 3 segundos como máximo
-setTimeout(() => {
-  document.getElementById('loading-screen').style.display = 'none';
-  render();
-}, 3000);
-
-// ── Guardar inventario ──
-window.saveInventario = async function(item) {
-  const { firestoreId, ...data } = item;
-  if (firestoreId) {
-    await setDoc(doc(db, 'inventario', firestoreId), data);
-  } else {
-    const ref = await addDoc(collection(db, 'inventario'), data);
-    item.firestoreId = ref.id;
-  }
-};
-
-// ── Guardar historial ──
-window.saveHistorial = async function(item) {
-  await addDoc(collection(db, 'historial'), item);
-};
-
-// ── Eliminar de inventario ──
-window.deleteInventario = async function(firestoreId) {
-  await deleteDoc(doc(db, 'inventario', firestoreId));
-};
-
-// ── NAVEGACIÓN ──
-window.irA = function(v) {
-  window.vista = v;
+function irA(vista) {
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-  document.getElementById('btn-' + v)?.classList.add('active');
-  if (v !== 'nuevo') window.coloresForm = [];
-  render();
-};
+  document.getElementById('btn-' + vista).classList.add('active');
+  if(vista === 'stock') renderStock();
+  if(vista === 'nuevo') renderNuevo();
+}
 
-// ── RENDER ──
-window.render = function() {
+window.renderStock = function() {
   const app = document.getElementById('app');
-  if (!app) return;
-  if (window.vista === 'stock') renderStock(app);
-  else if (window.vista === 'nuevo') renderNuevo(app, window.editId);
-  else if (window.vista === 'historial') renderHistorial(app);
-  else if (window.vista === 'balance') renderBalance(app);
-};
-
-// ── STOCK ──
-function renderStock(app) {
-  const inv = window.inventario;
-  let lista = inv.filter(p => {
-    const matchBusq = p.nombre.toLowerCase().includes(window.busquedaActual.toLowerCase());
-    const matchTalla = window.filtroTalla === 'todas' || p[window.filtroTalla] > 0;
-    return matchBusq && matchTalla;
-  });
-
-  const tallas = ['todas', 's', 'm', 'l', 'xl'];
-  let html = `
-    <div class="search-wrap">
-      <i class="fas fa-magnifying-glass"></i>
-      <input class="input" placeholder="Buscar modelo..." value="${window.busquedaActual}"
-        oninput="window.busquedaActual=this.value;render()">
-    </div>
-    <div class="filter-row">
-      ${tallas.map(t => `<button class="filter-chip ${window.filtroTalla===t?'active':''}" onclick="window.filtroTalla='${t}';render()">${t==='todas'?'Todas':t.toUpperCase()}</button>`).join('')}
-    </div>`;
-
-  if (lista.length === 0) {
-    html += `<div class="empty-state"><i class="fas fa-layer-group"></i><p>${inv.length===0?'Sin productos aún':'Sin resultados'}</p></div>`;
+  if(window.productos.length === 0) {
+    app.innerHTML = '<div style="text-align:center; padding:100px 20px; color:var(--muted)">Inventario vacío. Agrega una pijama en "Nuevo".</div>';
+    return;
   }
-
-  lista.forEach(p => {
-    const totalStock = p.s + p.m + p.l + p.xl;
-    html += `<div class="prod-card">
-      <div class="prod-header">
-        <div>
-          <div class="prod-name">${p.nombre}</div>
-          <div class="prod-price">$${p.precio.toLocaleString()}</div>
-          <div class="prod-cost">Costo: $${p.costo.toLocaleString()}</div>
-        </div>
-        <div class="prod-actions">
-          <button class="btn-sm" onclick="abrirEditar('${p.firestoreId}')"><i class="fas fa-pen"></i></button>
-          <button class="btn-sm danger" onclick="eliminar('${p.firestoreId}')"><i class="fas fa-trash"></i></button>
-        </div>
+  let html = '';
+  window.productos.forEach((p, i) => {
+    html += `<div class="prod-card" style="margin:15px">
+      <div style="display:flex; justify-content:space-between; font-weight:600">
+        <span>${p.nombre}</span><span style="color:var(--gold-dark)">$${p.precio}</span>
       </div>
-      ${(p.colores||[]).length ? `<div class="colores-wrap">${p.colores.map(c=>`<span class="color-tag">${c}</span>`).join('')}</div>` : ''}
       <div class="tallas-grid">
-        ${['s','m','l','xl'].map(t=>`
-          <div class="talla-btn ${p[t]===0?'zero':''}" onclick="abrirModal('venta','${p.firestoreId}')">
-            <span class="t-label">${t.toUpperCase()}</span>
-            <span class="t-qty">${p[t]}</span>
-          </div>`).join('')}
+        ${['S','M','L','XL'].map(t => `
+          <button class="talla-btn" onclick="vender(${i}, '${t}')">
+            <span style="font-size:10px; color:var(--muted)">${t}</span>
+            <span style="font-size:18px; font-weight:700">${p.tallas[t] || 0}</span>
+          </button>
+        `).join('')}
       </div>
-      <p class="talla-hint">Total: ${totalStock} unidades</p>
-      <div class="quick-actions" style="margin-top:10px">
-        <button class="btn-action sell" onclick="abrirModal('venta','${p.firestoreId}')"><i class="fas fa-tag"></i> Vender</button>
-        <button class="btn-action restock" onclick="abrirModal('entrada','${p.firestoreId}')"><i class="fas fa-box"></i> Reponer</button>
-      </div>
+      <button onclick="eliminar(${i})" style="margin-top:12px; background:none; border:none; color:var(--muted); font-size:10px; text-decoration:underline">ELIMINAR REFERENCIA</button>
     </div>`;
   });
-
   app.innerHTML = html;
 }
 
-// ── NUEVO / EDITAR ──
-function renderNuevo(app, firestoreId) {
-  window.editId = firestoreId || null;
-  const p = firestoreId ? window.inventario.find(x => x.firestoreId === firestoreId) : null;
-  if (p && (!window.coloresForm || window.coloresForm.length === 0)) {
-    window.coloresForm = [...(p.colores || [])];
-  }
-
-  app.innerHTML = `
+function renderNuevo() {
+  document.getElementById('app').innerHTML = `
     <div class="card">
-      <div class="section-title">${p ? 'Editar Modelo' : 'Nuevo Modelo'}</div>
-      <div class="field">
-        <label>Nombre del Modelo</label>
-        <input class="input" id="n-nombre" placeholder="Ej: Pijama Seda Azul" value="${p?p.nombre:''}">
+      <h3 style="margin-bottom:15px">Nueva Pijama</h3>
+      <input type="text" id="n-nom" class="input" placeholder="Nombre (Ej: Pijama Seda)">
+      <input type="number" id="n-pre" class="input" placeholder="Precio $">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+        <input type="number" id="n-s" class="input" placeholder="Cant. S">
+        <input type="number" id="n-m" class="input" placeholder="Cant. M">
+        <input type="number" id="n-l" class="input" placeholder="Cant. L">
+        <input type="number" id="n-xl" class="input" placeholder="Cant. XL">
       </div>
-      <div class="input-row">
-        <div class="field">
-          <label>Precio Costo</label>
-          <input class="input" id="n-costo" type="number" placeholder="0" value="${p?p.costo:''}">
-        </div>
-        <div class="field">
-          <label>Precio Venta</label>
-          <input class="input" id="n-precio" type="number" placeholder="0" value="${p?p.precio:''}">
-        </div>
-      </div>
-      <div class="field">
-        <label>Colores disponibles</label>
-        <div class="colores-input-wrap" onclick="document.getElementById('color-input-field').focus()" id="colores-chips">
-          <input id="color-input-field" placeholder="Escribí y presioná Enter..." onkeydown="agregarColor(event)">
-        </div>
-      </div>
-      <div class="field">
-        <label>Stock por Talla</label>
-        <div class="input-3">
-          ${['s','m','l','xl'].map(t=>`<div class="talla-field"><span>${t.toUpperCase()}</span><input class="input" id="n-${t}" type="number" value="${p?p[t]:0}"></div>`).join('')}
-        </div>
-      </div>
-      <button class="btn-gold" onclick="${p?`guardarEdicion('${firestoreId}')`:'guardar()'}">${p?'Guardar Cambios':'Agregar al Stock'}</button>
-      ${p?`<button style="width:100%;margin-top:10px;padding:14px;border-radius:12px;border:1.5px solid var(--warm2);background:var(--warm);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer" onclick="irA('stock')">Cancelar</button>`:''}
+      <button class="btn-gold" onclick="crear()">Guardar en la Nube</button>
     </div>`;
-
-  renderColoresChips();
 }
 
-window.agregarColor = function(e) {
-  if (e.key === 'Enter') {
-    const val = e.target.value.trim();
-    if (val && !window.coloresForm.includes(val)) {
-      window.coloresForm.push(val);
-      renderColoresChips();
+window.crear = function() {
+  const p = {
+    nombre: document.getElementById('n-nom').value,
+    precio: document.getElementById('n-pre').value,
+    tallas: {
+      S: parseInt(document.getElementById('n-s').value || 0),
+      M: parseInt(document.getElementById('n-m').value || 0),
+      L: parseInt(document.getElementById('n-l').value || 0),
+      XL: parseInt(document.getElementById('n-xl').value || 0)
     }
-    e.target.value = '';
-    e.preventDefault();
-  }
-};
-
-function renderColoresChips() {
-  const wrap = document.getElementById('colores-chips');
-  if (!wrap) return;
-  wrap.innerHTML = window.coloresForm.map((c,i) => `
-    <span class="color-chip">${c}<button onclick="quitarColor(${i})">×</button></span>`).join('');
-  const inp = document.createElement('input');
-  inp.id = 'color-input-field';
-  inp.placeholder = window.coloresForm.length ? '+color' : 'Escribí y presioná Enter...';
-  inp.style.cssText = 'border:none;outline:none;background:transparent;font-size:14px;min-width:80px;flex:1;color:var(--ink)';
-  inp.onkeydown = window.agregarColor;
-  wrap.appendChild(inp);
-}
-
-window.quitarColor = function(i) {
-  window.coloresForm.splice(i,1);
-  renderColoresChips();
-};
-
-window.guardar = async function() {
-  const nombre = document.getElementById('n-nombre').value.trim();
-  if (!nombre) { toast('⚠ Ponle un nombre al modelo'); return; }
-  const nuevo = {
-    id: Date.now(),
-    nombre,
-    costo: parseFloat(document.getElementById('n-costo').value)||0,
-    precio: parseFloat(document.getElementById('n-precio').value)||0,
-    colores: [...window.coloresForm],
-    s: parseInt(document.getElementById('n-s').value)||0,
-    m: parseInt(document.getElementById('n-m').value)||0,
-    l: parseInt(document.getElementById('n-l').value)||0,
-    xl: parseInt(document.getElementById('n-xl').value)||0,
   };
-  await window.saveInventario(nuevo);
-  window.coloresForm = [];
-  toast('✓ Modelo agregado');
+  window.productos.push(p);
+  window.guardarEnNube(window.productos);
   irA('stock');
-};
-
-window.abrirEditar = function(firestoreId) {
-  window.vista = 'nuevo';
-  window.coloresForm = [];
-  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
-  document.getElementById('btn-nuevo').classList.add('active');
-  renderNuevo(document.getElementById('app'), firestoreId);
-};
-
-window.guardarEdicion = async function(firestoreId) {
-  const p = window.inventario.find(x => x.firestoreId === firestoreId);
-  if (!p) return;
-  p.nombre = document.getElementById('n-nombre').value.trim() || p.nombre;
-  p.costo = parseFloat(document.getElementById('n-costo').value)||0;
-  p.precio = parseFloat(document.getElementById('n-precio').value)||0;
-  p.colores = [...window.coloresForm];
-  p.s = parseInt(document.getElementById('n-s').value)||0;
-  p.m = parseInt(document.getElementById('n-m').value)||0;
-  p.l = parseInt(document.getElementById('n-l').value)||0;
-  p.xl = parseInt(document.getElementById('n-xl').value)||0;
-  await window.saveInventario(p);
-  window.coloresForm = [];
-  toast('✓ Cambios guardados');
-  irA('stock');
-};
-
-window.eliminar = async function(firestoreId) {
-  if (confirm('¿Eliminar este modelo?')) {
-    await window.deleteInventario(firestoreId);
-    render();
-  }
-};
-
-// ── MODAL VENTA / ENTRADA ──
-window.abrirModal = function(tipo, firestoreId) {
-  const p = window.inventario.find(x => x.firestoreId === firestoreId);
-  if (!p) return;
-  window.tallasSeleccionadas = {};
-  window.modalData = { tipo, firestoreId };
-
-  document.getElementById('modal-title').textContent = tipo==='venta' ? `Registrar Venta · ${p.nombre}` : `Reponer Stock · ${p.nombre}`;
-  document.getElementById('modal-confirm').textContent = tipo==='venta' ? 'Registrar Venta' : 'Agregar Stock';
-
-  let html = `<p style="font-size:12px;color:var(--muted);margin-bottom:12px;letter-spacing:1px;text-transform:uppercase">Seleccioná las tallas y cantidades</p>
-  <div class="tallas-modal">`;
-
-  ['s','m','l','xl'].forEach(t => {
-    html += `<div class="talla-modal-btn" id="tm-${t}" onclick="toggleTalla('${t}')">
-      <span class="t-l">${t.toUpperCase()}</span>
-      <span class="t-q">${tipo==='venta'?p[t]:'∞'}</span>
-    </div>`;
-  });
-
-  html += `</div>
-  <div class="field" style="margin-top:12px">
-    <label>Cantidad</label>
-    <input class="input" id="modal-qty" type="number" value="1" min="1">
-  </div>`;
-
-  if (tipo==='venta') {
-    html += `<div class="field">
-      <label>Color vendido (opcional)</label>
-      <input class="input" id="modal-color" list="colores-list" placeholder="Seleccioná o escribí">
-      <datalist id="colores-list">${(p.colores||[]).map(c=>`<option value="${c}">`).join('')}</datalist>
-    </div>
-    <div class="field">
-      <label>Método de pago</label>
-      <select class="input" id="modal-pago">
-        <option value="Efectivo">Efectivo</option>
-        <option value="Transferencia">Transferencia</option>
-        <option value="Tarjeta">Tarjeta</option>
-        <option value="Mercado Pago">Mercado Pago</option>
-      </select>
-    </div>`;
-  }
-
-  document.getElementById('modal-body').innerHTML = html;
-  document.getElementById('modal').classList.remove('hidden');
-};
-
-window.toggleTalla = function(t) {
-  const btn = document.getElementById('tm-'+t);
-  if (window.tallasSeleccionadas[t]) {
-    delete window.tallasSeleccionadas[t];
-    btn.classList.remove('selected');
-  } else {
-    Object.keys(window.tallasSeleccionadas).forEach(k => {
-      document.getElementById('tm-'+k)?.classList.remove('selected');
-    });
-    window.tallasSeleccionadas = { [t]: true };
-    btn.classList.add('selected');
-  }
-};
-
-window.confirmarModal = async function() {
-  const { tipo, firestoreId } = window.modalData;
-  const p = window.inventario.find(x => x.firestoreId === firestoreId);
-  if (!p) return;
-  const tallas = Object.keys(window.tallasSeleccionadas);
-  if (!tallas.length) { toast('⚠ Seleccioná una talla'); return; }
-  const talla = tallas[0];
-  const qty = parseInt(document.getElementById('modal-qty').value)||1;
-  const color = document.getElementById('modal-color')?.value||'';
-  const metodoPago = document.getElementById('modal-pago')?.value||'Efectivo';
-
-  if (tipo==='venta') {
-    if (p[talla] < qty) { toast('⚠ Stock insuficiente'); return; }
-    p[talla] -= qty;
-    const total = p.precio * qty;
-    await window.saveInventario(p);
-    await window.saveHistorial({ tipo:'venta', prod: p.nombre, talla, qty, color, precio: total, fecha: new Date().toISOString(), pago: metodoPago });
-    cerrarModal(); render();
-    mostrarRecibo({ prod: p.nombre, talla, qty, color, precio: p.precio, total, pago: metodoPago });
-  } else {
-    p[talla] += qty;
-    await window.saveInventario(p);
-    await window.saveHistorial({ tipo:'entrada', prod: p.nombre, talla, qty, fecha: new Date().toISOString() });
-    toast(`✓ Stock repuesto · +${qty} ${talla.toUpperCase()}`);
-    cerrarModal(); render();
-  }
-};
-
-window.cerrarModal = function() {
-  document.getElementById('modal').classList.add('hidden');
-  window.tallasSeleccionadas = {};
-};
-
-// ── HISTORIAL ──
-function renderHistorial(app) {
-  let hist = window.historial;
-  if (window.histTab === 'ventas') hist = hist.filter(h=>h.tipo==='venta');
-  if (window.histTab === 'entradas') hist = hist.filter(h=>h.tipo==='entrada');
-
-  let html = `
-    <div class="tabs">
-      <button class="tab-btn ${window.histTab==='todo'?'active':''}" onclick="window.histTab='todo';render()">Todo</button>
-      <button class="tab-btn ${window.histTab==='ventas'?'active':''}" onclick="window.histTab='ventas';render()">Ventas</button>
-      <button class="tab-btn ${window.histTab==='entradas'?'active':''}" onclick="window.histTab='entradas';render()">Entradas</button>
-    </div>
-    <div class="card">`;
-
-  if (hist.length === 0) {
-    html += `<div class="empty-state"><i class="fas fa-clock-rotate-left"></i><p>Sin movimientos aún</p></div>`;
-  }
-
-  hist.slice(0,60).forEach(h => {
-    const fecha = new Date(h.fecha);
-    const fechaStr = fecha.toLocaleDateString('es-AR',{day:'2-digit',month:'short'}) + ' · ' + fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-    html += `<div class="hist-item">
-      <div class="hist-left">
-        <span class="hist-name">${h.prod}</span>
-        <span class="hist-meta">${h.talla.toUpperCase()} · ${h.qty} u${h.color?` · ${h.color}`:''} · ${fechaStr}</span>
-      </div>
-      <div style="text-align:right">
-        <span class="hist-badge ${h.tipo==='venta'?'venta':'entrada'}">${h.tipo==='venta'?'Venta':'Entrada'}</span>
-        ${h.tipo==='venta'?`<div style="font-size:13px;font-weight:600;color:var(--green);margin-top:4px">+$${h.precio.toLocaleString()}</div>`:''}
-      </div>
-    </div>`;
-  });
-
-  app.innerHTML = html + `</div>`;
 }
 
-// ── BALANCE ──
-function renderBalance(app) {
-  const inv = window.inventario;
-  const hist = window.historial;
-  let tStock=0, tCosto=0, tVenta=0;
-  inv.forEach(p => {
-    const cant = p.s+p.m+p.l+p.xl;
-    tStock += cant;
-    tCosto += cant*p.costo;
-    tVenta += cant*p.precio;
-  });
-
-  const totalVentas = hist.filter(h=>h.tipo==='venta').reduce((a,h)=>a+h.precio,0);
-  const totalUnidadesVendidas = hist.filter(h=>h.tipo==='venta').reduce((a,h)=>a+h.qty,0);
-  const gananciaProyectada = tVenta - tCosto;
-
-  const ventasPorModelo = {};
-  hist.filter(h=>h.tipo==='venta').forEach(h => {
-    ventasPorModelo[h.prod] = (ventasPorModelo[h.prod]||0) + h.qty;
-  });
-  const topModelos = Object.entries(ventasPorModelo).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  const maxVenta = topModelos[0]?.[1] || 1;
-
-  let html = `
-    <div class="balance-hero">
-      <p class="balance-label">Ganancia Proyectada</p>
-      <div class="balance-amount">$${gananciaProyectada.toLocaleString()}</div>
-      <div class="balance-grid">
-        <div class="balance-item"><p>Costo Total</p><p style="color:#e74c3c">$${tCosto.toLocaleString()}</p></div>
-        <div class="balance-item"><p>Valor Stock</p><p style="color:#2ecc71">$${tVenta.toLocaleString()}</p></div>
-      </div>
-    </div>
-    <div class="bal-mini">
-      <div class="bal-mini-card"><div class="bm-label">Unidades Stock</div><div class="bm-val">${tStock}</div></div>
-      <div class="bal-mini-card"><div class="bm-label">Unidades Vendidas</div><div class="bm-val">${totalUnidadesVendidas}</div></div>
-      <div class="bal-mini-card" style="grid-column:1/-1"><div class="bm-label">Total Recaudado</div><div class="bm-val" style="color:var(--green)">$${totalVentas.toLocaleString()}</div></div>
-    </div>`;
-
-  if (topModelos.length > 0) {
-    html += `<div class="card"><div class="section-title" style="margin-bottom:16px">Top Modelos Vendidos</div><div class="chart-wrap">`;
-    topModelos.forEach(([nombre, qty]) => {
-      const pct = Math.round((qty/maxVenta)*100);
-      html += `<div class="bar-row"><span class="bar-label">${nombre}</span><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div><span class="bar-val">${qty}u</span></div>`;
-    });
-    html += `</div></div>`;
+window.vender = function(idx, talla) {
+  if(window.productos[idx].tallas[talla] > 0) {
+    window.productos[idx].tallas[talla]--;
+    window.guardarEnNube(window.productos);
   }
-
-  const porTalla = {s:0,m:0,l:0,xl:0};
-  hist.filter(h=>h.tipo==='venta').forEach(h => { if(porTalla[h.talla]!==undefined) porTalla[h.talla]+=h.qty; });
-  const maxT = Math.max(...Object.values(porTalla),1);
-  html += `<div class="card" style="margin-top:10px"><div class="section-title" style="margin-bottom:16px">Ventas por Talla</div><div class="chart-wrap">`;
-  Object.entries(porTalla).forEach(([t,qty]) => {
-    html += `<div class="bar-row"><span class="bar-label">${t.toUpperCase()}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round((qty/maxT)*100)}%"></div></div><span class="bar-val">${qty}u</span></div>`;
-  });
-  html += `</div></div>`;
-  app.innerHTML = html;
 }
 
-// ── EXCEL ──
-window.descargarExcel = function() {
-  if (!window.inventario.length) { toast('⚠ Sin datos para exportar'); return; }
-  const wb = XLSX.utils.book_new();
-  const inv = window.inventario.map(p=>({
-    Modelo: p.nombre, Colores: (p.colores||[]).join(', '),
-    Costo: p.costo, Venta: p.precio,
-    S: p.s, M: p.m, L: p.l, XL: p.xl,
-    Total: p.s+p.m+p.l+p.xl,
-    'Valor Stock': (p.s+p.m+p.l+p.xl)*p.precio
-  }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(inv), 'Inventario');
-  if (window.historial.length) {
-    const hist = window.historial.map(h=>({
-      Tipo: h.tipo, Modelo: h.prod, Talla: h.talla.toUpperCase(),
-      Cantidad: h.qty, Color: h.color||'', Total: h.precio||0,
-      Fecha: new Date(h.fecha).toLocaleString('es-AR')
-    }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(hist), 'Historial');
+window.eliminar = function(idx) {
+  if(confirm("¿Eliminar este producto de todos los dispositivos?")) {
+    window.productos.splice(idx, 1);
+    window.guardarEnNube(window.productos);
   }
-  XLSX.writeFile(wb, `Lovely_${new Date().toLocaleDateString('es-AR').replace(/\//g,'-')}.xlsx`);
-  toast('✓ Excel exportado');
-};
-
-// ── TOAST ──
-window.toast = function(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2400);
-};
-
-// ── RECIBO ──
-function mostrarRecibo(data) {
-  window.reciboData = data;
-  const fecha = new Date();
-  const fechaStr = fecha.toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
-  const horaStr = fecha.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
-  const num = 'REC-' + Date.now().toString().slice(-6);
-  document.getElementById('recibo-num').textContent = num;
-  document.getElementById('recibo-body').innerHTML = `
-    <div class="recibo-row"><span class="r-label">Producto</span><span class="r-val">${data.prod}</span></div>
-    <div class="recibo-row"><span class="r-label">Talla</span><span class="r-val">${data.talla.toUpperCase()}</span></div>
-    ${data.color ? `<div class="recibo-row"><span class="r-label">Color</span><span class="r-val">${data.color}</span></div>` : ''}
-    <div class="recibo-row"><span class="r-label">Cantidad</span><span class="r-val">${data.qty} unidad${data.qty>1?'es':''}</span></div>
-    <div class="recibo-row"><span class="r-label">Precio unitario</span><span class="r-val">$${data.precio.toLocaleString()}</span></div>
-    <div class="recibo-total"><span class="t-label">Total</span><span class="t-amount">$${data.total.toLocaleString()}</span></div>
-    <div class="recibo-pago">Método de pago: ${data.pago}</div>
-    <div class="recibo-fecha">${fechaStr} · ${horaStr}</div>
-    <div class="recibo-gracias">¡Gracias por tu compra!</div>`;
-  document.getElementById('recibo').classList.remove('hidden');
 }
 
-window.cerrarRecibo = function() {
-  document.getElementById('recibo').classList.add('hidden');
+window.onload = () => {
+  setTimeout(() => {
+    document.getElementById('loading-screen').style.opacity = '0';
+    setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 500);
+    irA('stock');
+  }, 1000);
 };
-
-window.compartirRecibo = function() {
-  const d = window.reciboData;
-  const fecha = new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
-  const texto = `🌟 LOVELY PIJAMAS\n━━━━━━━━━━━━━━\n📦 ${d.prod}\n📐 Talla: ${d.talla.toUpperCase()}${d.color ? '\n🎨 Color: '+d.color : ''}\n🔢 Cantidad: ${d.qty}\n💰 Total: $${d.total.toLocaleString()}\n💳 Pago: ${d.pago}\n📅 ${fecha}\n━━━━━━━━━━━━━━\n¡Gracias por tu compra! 🛍️`;
-  if (navigator.share) {
-    navigator.share({ text: texto });
-  } else {
-    navigator.clipboard.writeText(texto).then(() => toast('✓ Recibo copiado'));
-  }
-};
-
-// ── INIT ──
-document.getElementById('modal').addEventListener('click', function(e) {
-  if (e.target === this) cerrarModal();
-});
-
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
-}
-
 </script>
 </body>
 </html>
